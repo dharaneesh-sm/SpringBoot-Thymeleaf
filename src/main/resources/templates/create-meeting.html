@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Create New Meeting</title>
+</head>
+<body>
+<main th:fragment="main" class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-plus-circle"></i> Create New Meeting
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/create-meeting}" method="post">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Your Name *</label>
+                                <input type="text" class="form-control" id="username" name="username"
+                                       placeholder="Enter your name" required>
+                                <div class="form-text">This will be displayed to other participants</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="meetingTitle" class="form-label">Meeting Title (Optional)</label>
+                                <input type="text" class="form-control" id="meetingTitle" name="meetingTitle"
+                                       placeholder="e.g., Daily Standup, Project Review">
+                                <div class="form-text">Give your meeting a descriptive title</div>
+                            </div>
+
+                            
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-video"></i> Create Meeting
+                                </button>
+                                <a th:href="@{/}" class="btn btn-outline-secondary">
+                                    <i class="fas fa-arrow-left"></i> Back to Home
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Info Section -->
+                <!-- <div class="mt-4 text-center">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>What happens next?</strong><br>
+                        After creating the meeting, you'll be redirected to the meeting room.
+                        Share the meeting code with others to invite them.
+                    </div>
+                </div> -->
+
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

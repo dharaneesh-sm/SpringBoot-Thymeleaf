@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Video Meeting App - Home</title>
+</head>
+<body>
+<main th:fragment="main" class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-10">
+                <!-- Hero Section -->
+                <div class="text-center mb-5">
+                    <h1 class="display-4 mb-3">
+                        <i class="fas fa-video text-primary"></i>
+                        Video Meeting App
+                    </h1>
+                    <p class="lead">Connect with people around the world through secure video meetings</p>
+                </div>
+
+                <!-- Action Cards -->
+                <div class="row g-4 mb-5">
+                    <!-- Create Meeting Card -->
+                    <div class="col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>
+                                <h5 class="card-title">Create Meeting</h5>
+                                <p class="card-text">Start a new video meeting and invite others to join</p>
+                                <a th:href="@{/create-meeting}" class="btn btn-primary btn-lg">
+                                    <i class="fas fa-plus"></i> New Meeting
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Join Meeting Card -->
+                    <div class="col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body text-center">
+                                <i class="fas fa-sign-in-alt fa-3x text-success mb-3"></i>
+                                <h5 class="card-title">Join Meeting</h5>
+                                <p class="card-text">Enter a meeting code to join an existing meeting</p>
+                                <a th:href="@{/join-meeting}" class="btn btn-success btn-lg">
+                                    <i class="fas fa-sign-in-alt"></i> Join Meeting
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Join Form -->
+                <!-- <div class="row">
+                    <div class="col-md-8 mx-auto">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-lightning-bolt"></i> Quick Join
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <form th:action="@{/join-meeting}" method="post" class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="quickMeetingCode" class="form-label">Meeting Code</label>
+                                        <input type="text" class="form-control" id="quickMeetingCode"
+                                               name="meetingCode" placeholder="Enter meeting code"
+                                               style="text-transform: uppercase;" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="quickUsername" class="form-label">Your Name</label>
+                                        <input type="text" class="form-control" id="quickUsername"
+                                               name="username" placeholder="Enter your name" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-video"></i> Join Now
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div> -->
+
+                <!-- Features Section -->
+                <!-- <div class="row mt-5">
+                    <div class="col-12">
+                        <h3 class="text-center mb-4">Features</h3>
+                        <div class="row g-4">
+                            <div class="col-md-3 text-center">
+                                <i class="fas fa-shield-alt fa-2x text-success mb-2"></i>
+                                <h6>Secure</h6>
+                                <small class="text-muted">End-to-end encrypted meetings</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <i class="fas fa-users fa-2x text-info mb-2"></i>
+                                <h6>Multi-participant</h6>
+                                <small class="text-muted">Support for multiple participants</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <i class="fas fa-comments fa-2x text-warning mb-2"></i>
+                                <h6>Chat</h6>
+                                <small class="text-muted">Real-time chat during meetings</small>
+                            </div>
+                            <div class="col-md-3 text-center">
+                                <i class="fas fa-desktop fa-2x text-purple mb-2"></i>
+                                <h6>Screen Share</h6>
+                                <small class="text-muted">Share your screen with participants</small>
+                            </div>
+                        </div>
+                    </div>
+                </div> -->
+                
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>
