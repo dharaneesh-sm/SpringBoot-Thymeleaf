@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Profile - Video Meeting App</title>
+</head>
+<body>
+<main th:fragment="main" class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <!-- Profile Header -->
+                <div class="card shadow mb-4">
+                    <div class="card-body text-center p-4">
+                        <div class="mb-3">
+                            <i class="fas fa-user-circle fa-5x text-primary"></i>
+                        </div>
+                        <h2 class="h4 mb-1" th:text="${user.displayName}">Display Name</h2>
+                        <p class="text-muted mb-1">@<span th:text="${user.username}">username</span></p>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-envelope me-1"></i>
+                            <span th:text="${user.email}">email@example.com</span>
+                        </p>
+                        <small class="text-muted">
+                            Member since <span th:text="${#temporals.format(user.createdAt, 'MMM dd, yyyy')}">Jan 01, 2024</span>
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Error/Success Messages -->
+                <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span th:text="${error}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span th:text="${success}"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+
+                <!-- Update Profile -->
+                <div class="card shadow mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-edit me-2"></i>Update Profile
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/profile/update}" method="post" novalidate>
+                            <div class="mb-3">
+                                <label for="displayName" class="form-label">
+                                    <i class="fas fa-id-badge me-1"></i>Display Name
+                                </label>
+                                <input type="text" class="form-control" id="displayName" name="displayName" 
+                                       th:value="${user.displayName}" placeholder="How others will see you" 
+                                       maxlength="100" required>
+                                <div class="invalid-feedback">
+                                    Display name is required.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">
+                                    <i class="fas fa-envelope me-1"></i>Email
+                                </label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       th:value="${user.email}" placeholder="Enter your email" required>
+                                <div class="invalid-feedback">
+                                    Please enter a valid email address.
+                                </div>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Update Profile
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Change Password -->
+                <div class="card shadow mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-key me-2"></i>Change Password
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form th:action="@{/profile/change-password}" method="post" novalidate>
+                            <div class="mb-3">
+                                <label for="currentPassword" class="form-label">
+                                    <i class="fas fa-lock me-1"></i>Current Password
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="currentPassword" name="currentPassword" 
+                                           placeholder="Enter current password" required>
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleCurrentPassword">
+                                        <i class="fas fa-eye" id="toggleCurrentPasswordIcon"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback">
+                                    Please enter your current password.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="newPassword" class="form-label">
+                                    <i class="fas fa-lock me-1"></i>New Password
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="newPassword" name="newPassword" 
+                                           placeholder="Enter new password" required minlength="6">
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleNewPassword">
+                                        <i class="fas fa-eye" id="toggleNewPasswordIcon"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text">At least 6 characters</div>
+                                <div class="invalid-feedback">
+                                    New password must be at least 6 characters long.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">
+                                    <i class="fas fa-lock me-1"></i>Confirm New Password
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" 
+                                           placeholder="Confirm new password" required minlength="6">
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                        <i class="fas fa-eye" id="toggleConfirmPasswordIcon"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback" id="confirmPasswordFeedback">
+                                    Please confirm your new password.
+                                </div>
+                            </div>
+
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-key me-2"></i>Change Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="text-center">
+                    <a th:href="@{/}" class="btn btn-outline-primary me-2">
+                        <i class="fas fa-home me-1"></i>Back to Home
+                    </a>
+                    <a th:href="@{/signout}" class="btn btn-outline-danger">
+                        <i class="fas fa-sign-out-alt me-1"></i>Sign Out
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for password toggle and validation -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Password toggle functionality
+            function setupPasswordToggle(toggleId, inputId, iconId) {
+                const toggle = document.getElementById(toggleId);
+                const input = document.getElementById(inputId);
+                const icon = document.getElementById(iconId);
+
+                if (toggle && input && icon) {
+                    toggle.addEventListener('click', function() {
+                        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                        input.setAttribute('type', type);
+                        
+                        if (type === 'password') {
+                            icon.classList.remove('fa-eye-slash');
+                            icon.classList.add('fa-eye');
+                        } else {
+                            icon.classList.remove('fa-eye');
+                            icon.classList.add('fa-eye-slash');
+                        }
+                    });
+                }
+            }
+
+            setupPasswordToggle('toggleCurrentPassword', 'currentPassword', 'toggleCurrentPasswordIcon');
+            setupPasswordToggle('toggleNewPassword', 'newPassword', 'toggleNewPasswordIcon');
+            setupPasswordToggle('toggleConfirmPassword', 'confirmPassword', 'toggleConfirmPasswordIcon');
+
+            // Password change form validation
+            const passwordForm = document.querySelector('form[action*="change-password"]');
+            const newPasswordInput = document.getElementById('newPassword');
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+            const confirmPasswordFeedback = document.getElementById('confirmPasswordFeedback');
+
+            function validatePasswordMatch() {
+                if (confirmPasswordInput.value && newPasswordInput.value !== confirmPasswordInput.value) {
+                    confirmPasswordInput.setCustomValidity('Passwords do not match');
+                    confirmPasswordFeedback.textContent = 'Passwords do not match.';
+                } else {
+                    confirmPasswordInput.setCustomValidity('');
+                    confirmPasswordFeedback.textContent = 'Please confirm your new password.';
+                }
+            }
+
+            if (newPasswordInput && confirmPasswordInput) {
+                newPasswordInput.addEventListener('input', validatePasswordMatch);
+                confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+            }
+
+            // Form validation for both forms
+            const forms = document.querySelectorAll('form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function(event) {
+                    if (form === passwordForm) {
+                        validatePasswordMatch();
+                    }
+                    
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                });
+            });
+        });
+    </script>
+</main>
+</body>
+</html>

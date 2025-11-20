@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout :: layout(~{::title}, ~{::main})}">
+<head>
+    <title>Sign Up - Video Meeting App</title>
+</head>
+<body>
+<main th:fragment="main" class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-5">
+                <div class="card shadow">
+                    <div class="card-body p-4">
+                        <!-- Header -->
+                        <div class="text-center mb-4">
+                            <i class="fas fa-user-plus fa-3x text-success mb-3"></i>
+                            <h2 class="h4 mb-1">Create Account</h2>
+                            <p class="text-muted">Join Video Meeting App today</p>
+                        </div>
+
+                        <!-- Error/Success Messages -->
+                        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <span th:text="${error}"></span>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+
+                        <!-- Sign Up Form -->
+                        <form th:action="@{/signup}" method="post" novalidate>
+                            <div class="mb-3">
+                                <label for="username" class="form-label">
+                                    <i class="fas fa-user me-1"></i>Username <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" class="form-control" id="username" name="username" 
+                                       th:value="${username}" placeholder="Choose a username" 
+                                       required minlength="3" maxlength="50" autocomplete="username">
+                                <div class="form-text">3-50 characters, will be visible to other users</div>
+                                <div class="invalid-feedback">
+                                    Username must be between 3 and 50 characters.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">
+                                    <i class="fas fa-envelope me-1"></i>Email <span class="text-danger">*</span>
+                                </label>
+                                <input type="email" class="form-control" id="email" name="email" 
+                                       th:value="${email}" placeholder="Enter your email" 
+                                       required autocomplete="email">
+                                <div class="invalid-feedback">
+                                    Please enter a valid email address.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="displayName" class="form-label">
+                                    <i class="fas fa-id-badge me-1"></i>Display Name
+                                </label>
+                                <input type="text" class="form-control" id="displayName" name="displayName" 
+                                       th:value="${displayName}" placeholder="How others will see you" 
+                                       maxlength="100" autocomplete="name">
+                                <div class="form-text">Optional - defaults to username if not provided</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="password" class="form-label">
+                                    <i class="fas fa-lock me-1"></i>Password <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="password" name="password" 
+                                           placeholder="Create a password" required minlength="6" 
+                                           autocomplete="new-password">
+                                    <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                        <i class="fas fa-eye" id="togglePasswordIcon"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text">At least 6 characters</div>
+                                <div class="invalid-feedback">
+                                    Password must be at least 6 characters long.
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">
+                                    <i class="fas fa-lock me-1"></i>Confirm Password <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" 
+                                           placeholder="Confirm your password" required minlength="6" 
+                                           autocomplete="new-password">
+                                    <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                        <i class="fas fa-eye" id="toggleConfirmPasswordIcon"></i>
+                                    </button>
+                                </div>
+                                <div class="invalid-feedback" id="confirmPasswordFeedback">
+                                    Please confirm your password.
+                                </div>
+                            </div>
+
+                            <div class="d-grid mb-3">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-user-plus me-2"></i>Create Account
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Divider -->
+                        <hr class="my-4">
+
+                        <!-- Sign In Link -->
+                        <div class="text-center">
+                            <p class="mb-0">Already have an account?</p>
+                            <a th:href="@{/signin}" class="btn btn-outline-primary btn-sm mt-2">
+                                <i class="fas fa-sign-in-alt me-1"></i>Sign In
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Guest Access -->
+                <div class="card mt-3">
+                    <div class="card-body text-center py-3">
+                        <p class="mb-2 text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Want to join a meeting without signing up?
+                        </p>
+                        <a th:href="@{/join-meeting}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-users me-1"></i>Join as Guest
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for form validation and password toggle -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Password toggle functionality
+            function setupPasswordToggle(toggleId, inputId, iconId) {
+                const toggle = document.getElementById(toggleId);
+                const input = document.getElementById(inputId);
+                const icon = document.getElementById(iconId);
+
+                if (toggle && input && icon) {
+                    toggle.addEventListener('click', function() {
+                        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                        input.setAttribute('type', type);
+                        
+                        if (type === 'password') {
+                            icon.classList.remove('fa-eye-slash');
+                            icon.classList.add('fa-eye');
+                        } else {
+                            icon.classList.remove('fa-eye');
+                            icon.classList.add('fa-eye-slash');
+                        }
+                    });
+                }
+            }
+
+            setupPasswordToggle('togglePassword', 'password', 'togglePasswordIcon');
+            setupPasswordToggle('toggleConfirmPassword', 'confirmPassword', 'toggleConfirmPasswordIcon');
+
+            // Form validation
+            const form = document.querySelector('form');
+            const passwordInput = document.getElementById('password');
+            const confirmPasswordInput = document.getElementById('confirmPassword');
+            const confirmPasswordFeedback = document.getElementById('confirmPasswordFeedback');
+
+            function validatePasswordMatch() {
+                if (confirmPasswordInput.value && passwordInput.value !== confirmPasswordInput.value) {
+                    confirmPasswordInput.setCustomValidity('Passwords do not match');
+                    confirmPasswordFeedback.textContent = 'Passwords do not match.';
+                } else {
+                    confirmPasswordInput.setCustomValidity('');
+                    confirmPasswordFeedback.textContent = 'Please confirm your password.';
+                }
+            }
+
+            if (passwordInput && confirmPasswordInput) {
+                passwordInput.addEventListener('input', validatePasswordMatch);
+                confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+            }
+
+            if (form) {
+                form.addEventListener('submit', function(event) {
+                    validatePasswordMatch();
+                    
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                });
+            }
+        });
+    </script>
+</main>
+</body>
+</html>
