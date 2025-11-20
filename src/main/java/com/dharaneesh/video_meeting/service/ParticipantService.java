@@ -12,9 +12,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Service for managing meeting participants
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -23,9 +20,6 @@ public class ParticipantService {
 
     private final ParticipantRepository participantRepository;
 
-    /**
-     * Adds a participant to a meeting
-     */
     public Participant addParticipant(Meeting meeting, String participantName, String sessionId) {
         Participant participant = new Participant();
         participant.setMeeting(meeting);
@@ -39,9 +33,6 @@ public class ParticipantService {
         return saved;
     }
 
-    /**
-     * Returns existing active participant with this session or creates one
-     */
     public Participant getOrAddParticipant(Meeting meeting, String participantName, String sessionId) {
         Optional<Participant> existing = participantRepository.findBySessionId(sessionId);
         if (existing.isPresent() && existing.get().getLeftAt() == null) {
@@ -50,9 +41,6 @@ public class ParticipantService {
         return addParticipant(meeting, participantName, sessionId);
     }
 
-    /**
-     * Removes a participant from meeting
-     */
     public void removeParticipant(String sessionId) {
         Optional<Participant> participant = participantRepository.findBySessionId(sessionId);
         if (participant.isPresent()) {
@@ -65,17 +53,11 @@ public class ParticipantService {
         }
     }
 
-    /**
-     * Gets active participants for a meeting
-     */
     @Transactional(readOnly = true)
     public List<Participant> getActiveParticipants(String meetingCode) {
         return participantRepository.findActiveParticipantsByMeetingCode(meetingCode);
     }
 
-    /**
-     * Updates participant media state (mute/video)
-     */
     public void updateParticipantMediaState(String sessionId, Boolean isMuted, Boolean videoEnabled) {
         Optional<Participant> participant = participantRepository.findBySessionId(sessionId);
         if (participant.isPresent()) {
@@ -88,11 +70,5 @@ public class ParticipantService {
         }
     }
 
-    /**
-     * Gets participant by session ID
-     */
-    @Transactional(readOnly = true)
-    public Optional<Participant> getParticipantBySessionId(String sessionId) {
-        return participantRepository.findBySessionId(sessionId);
-    }
+
 }

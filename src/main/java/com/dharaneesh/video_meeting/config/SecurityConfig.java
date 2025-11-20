@@ -24,15 +24,14 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf
                         .ignoringRequestMatchers("/api/**", "/ws/**", "/h2-console/**"))
 
-                // Configure authorization
-//                .authorizeHttpRequests(authz -> authz
-//                        .requestMatchers("/", "/create-meeting", "/join-meeting",
-//                                "/meeting/**", "/api/**", "/ws/**",
-//                                "/css/**", "/js/**", "/images/**", "/favicon.ico",
-//                                "/h2-console/**").permitAll()
-//                        .anyRequest().authenticated())
-
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+                // Configure authorization - allow most endpoints but let controllers handle auth
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/signin", "/signup", "/join-meeting",
+                                "/meeting/**", "/api/**", "/ws/**",
+                                "/css/**", "/js/**", "/images/**", "/favicon.ico",
+                                "/h2-console/**", "/actuator/**", "/swagger-ui/**", "/v3/**").permitAll()
+                        .requestMatchers("/create-meeting", "/profile/**", "/signout").permitAll() // Let controllers handle auth
+                        .anyRequest().authenticated())
 
                 // Disable frame options for H2 console
                 .headers(headers -> headers.frameOptions().disable())
@@ -41,7 +40,12 @@ public class SecurityConfig {
                 .httpBasic(httpBasic -> httpBasic.disable())
 
                 // Disable form login
-                .formLogin(formLogin -> formLogin.disable());
+                .formLogin(formLogin -> formLogin.disable())
+                
+                // Configure session management
+                .sessionManagement(session -> session
+                        .maximumSessions(1)
+                        .maxSessionsPreventsLogin(false));
 
         return http.build();
     }

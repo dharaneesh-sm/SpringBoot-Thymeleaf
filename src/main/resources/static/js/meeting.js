@@ -28,46 +28,22 @@ class MeetingManager {
 
     async init() {
         try {
-            console.log('Initializing meeting manager...');
-            console.log('Meeting data:', {
-                meetingCode: this.meetingCode,
-                username: this.username,
-                isHost: this.isHost
-            });
-
-            // Show loading
             this.showLoading('Connecting to meeting...');
-
-            // Connect to WebSocket first
-            console.log('Connecting to WebSocket...');
             await this.connectWebSocket();
 
-            // Initialize WebRTC after WebSocket is connected
-            console.log('Initializing WebRTC manager...');
             this.webrtcManager = new WebRTCManager(
                 this.meetingCode,
                 this.username,
                 this
             );
 
-            // Initialize Chat manager (after WebSocket is connected)
             if (window.ChatManager) {
-                console.log('Initializing chat manager...');
                 this.chatManager = new ChatManager(this.meetingCode, this.username, this.stompClient);
             }
 
-            // Setup UI event listeners
-            console.log('Setting up UI event listeners...');
             this.setupUIEventListeners();
-
-            // Join the meeting
-            console.log('Joining meeting...');
             this.joinMeeting();
-
-            // Hide loading
             this.hideLoading();
-
-            console.log('Meeting manager initialized successfully');
         } catch (error) {
             console.error('Error initializing meeting manager:', error);
             this.handleError('Failed to connect to meeting: ' + error.message);
@@ -78,21 +54,12 @@ class MeetingManager {
     connectWebSocket() {
         return new Promise((resolve, reject) => {
             try {
-                // Create SockJS connection
                 this.socket = new SockJS('/ws');
-
-                // Create STOMP client
                 this.stompClient = Stomp.over(this.socket);
-
-                // Disable debug logging
                 this.stompClient.debug = null;
 
-                // Connect to server
                 this.stompClient.connect({},
                     (frame) => {
-                        console.log('Connected to WebSocket:', frame);
-
-                        // Setup subscriptions
                         this.setupWebSocketSubscriptions();
                         resolve();
                     },
@@ -108,7 +75,9 @@ class MeetingManager {
     }
 
     setupWebSocketSubscriptions() {
+
         // Subscribe to participant updates
+        // Response from handleParticipantJoin() and handleParticipantLeave()
         this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/participants`,
             (message) => {
                 const data = JSON.parse(message.body);
@@ -116,7 +85,16 @@ class MeetingManager {
             }
         );
 
+        // Subscribe to WebRTC signaling
+        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/webrtc-signal`,
+            (message) => {
+                const data = JSON.parse(message.body);
+                this.handleWebRTCSignal(data);
+            }
+        );
+
         // Subscribe to media state changes
+        // Response from handleMediaStateChange()
         this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/media-state`,
             (message) => {
                 const data = JSON.parse(message.body);
@@ -137,16 +115,6 @@ class MeetingManager {
                 }
             }
         );
-
-        // Subscribe to WebRTC signaling (use broadcast for now - simpler and more reliable)
-        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/webrtc-signal`,
-            (message) => {
-                const data = JSON.parse(message.body);
-                this.handleWebRTCSignal(data);
-            }
-        );
-
-        console.log('WebSocket subscriptions setup complete');
     }
 
     joinMeeting() {
@@ -154,54 +122,37 @@ class MeetingManager {
             participantName: this.username
         };
 
-        this.stompClient.send(`/app/meeting/${this.meetingCode}/join`,
-            {}, JSON.stringify(joinMessage)
-        );
-
-        console.log('Sent join meeting message');
+        // Calls handleParticipantJoin()
+        this.stompClient.send(`/app/meeting/${this.meetingCode}/join`,{}, JSON.stringify(joinMessage));
     }
 
     handleParticipantUpdate(data) {
-        console.log('Participant update:', data);
-
         if (data.type === 'PARTICIPANT_JOINED') {
             const participant = data.participant;
-
-            // Track participant
             this.participants.set(participant.sessionId, participant);
 
-            // If this is me joining, save my session ID
             if (participant.name === this.username) {
                 this.sessionId = participant.sessionId;
-                console.log('✅ My session ID:', this.sessionId);
 
-                // Wait for WebRTC to be fully ready, then create offers
+                // Create offers to existing participants
                 setTimeout(() => {
                     if (Array.isArray(data.participants)) {
                         const existingParticipants = data.participants.filter(p => p.name !== this.username);
-                        console.log(`🔄 Creating offers to ${existingParticipants.length} existing participants`);
 
                         existingParticipants.forEach((p, index) => {
-                            // Stagger the offers to avoid overwhelming the signaling
                             setTimeout(() => {
-                                console.log('📞 Creating offer to:', p.name);
                                 this.webrtcManager.createOffer(p.sessionId, p.name);
                             }, index * 300);
                         });
                     }
-                }, 1000); // Give WebRTC time to fully initialize
+                }, 1000);
             } else {
-                // Someone else joined - create offer to them
                 if (this.webrtcManager && this.sessionId) {
-                    console.log('👋 New participant joined:', participant.name);
-
                     setTimeout(() => {
-                        console.log('📞 Creating offer to new participant:', participant.name);
                         this.webrtcManager.createOffer(participant.sessionId, participant.name);
-                    }, 500); // Give them time to initialize
+                    }, 500);
                 }
 
-                // Add chat message
                 if (this.chatManager) {
                     this.chatManager.addSystemMessage(`${participant.name} joined the meeting`);
                 }
@@ -228,6 +179,13 @@ class MeetingManager {
         }
 
         if (data.participants) {
+            // Update participants map with full list
+            data.participants.forEach(p => {
+                if (p.sessionId && p.name) {
+                    this.participants.set(p.sessionId, p);
+                }
+            });
+
             this.updateParticipantsList(data.participants);
 
             // Update WebRTC participant names if we have better information
@@ -244,45 +202,26 @@ class MeetingManager {
     handleWebRTCSignal(data) {
         const { type, fromSessionId, targetSessionId } = data;
 
-        console.log('Received WebRTC signal:', type, 'from:', fromSessionId, 'to:', targetSessionId);
-
-        // Ignore messages not intended for us
+        // Ignore messages not intended for us or our own messages
         if (targetSessionId && targetSessionId !== "" && this.sessionId && targetSessionId !== this.sessionId) {
-            console.log('Ignoring signal not for us');
             return;
         }
 
-        // Ignore our own messages
         if (this.sessionId && fromSessionId === this.sessionId) {
-            console.log('Ignoring our own signal');
             return;
         }
 
-        // Get participant name - try multiple sources
+        // Get participant name
         let fromName = 'Unknown';
-
-        // First, try to get from participants map
         const participant = this.participants.get(fromSessionId);
         if (participant && participant.name) {
             fromName = participant.name;
         } else if (this.webrtcManager) {
-            // Fallback: try to get from WebRTC peer connections
             const peerData = this.webrtcManager.peerConnections.get(fromSessionId);
             if (peerData && peerData.name) {
                 fromName = peerData.name;
             }
         }
-
-        // Debug logging if name is still unknown
-        if (fromName === 'Unknown') {
-            console.log('🔍 Debug - Could not resolve name for sessionId:', fromSessionId);
-            console.log('🔍 Available participants:', Array.from(this.participants.keys()));
-            if (this.webrtcManager) {
-                console.log('🔍 Available peer connections:', Array.from(this.webrtcManager.peerConnections.keys()));
-            }
-        }
-
-        console.log('Processing WebRTC signal:', type, 'from:', fromName);
 
         // Process the signal
         if (this.webrtcManager) {
@@ -296,19 +235,15 @@ class MeetingManager {
                 case 'ice-candidate':
                     this.webrtcManager.handleIceCandidate(fromSessionId, data.data);
                     break;
-                default:
-                    console.log('Unknown signal type:', type);
             }
-        } else {
-            console.warn('WebRTC manager not available');
         }
     }
 
     sendSignal(signalData) {
         if (this.stompClient && this.stompClient.connected) {
-            this.stompClient.send(`/app/meeting/${this.meetingCode}/webrtc-signal`,
-                {}, JSON.stringify(signalData)
-            );
+
+            // Calls handleWebRTCSignaling()
+            this.stompClient.send(`/app/meeting/${this.meetingCode}/webrtc-signal`,{}, JSON.stringify(signalData));
         }
     }
 
@@ -326,7 +261,14 @@ class MeetingManager {
             // Update video overlay
             this.updateParticipantVideoOverlay(sessionId, { isMuted, videoEnabled });
 
-            console.log(`${participantName} - Muted: ${isMuted}, Video: ${videoEnabled}`);
+            // Handle video placeholder for remote participants
+            if (this.webrtcManager && sessionId !== this.sessionId) {
+                if (videoEnabled) {
+                    this.webrtcManager.hideRemoteVideoPlaceholder(sessionId);
+                } else {
+                    this.webrtcManager.showRemoteVideoPlaceholder(sessionId, participantName);
+                }
+            }
         }
     }
 
@@ -427,10 +369,6 @@ class MeetingManager {
             this.toggleParticipants();
         };
 
-        window.openSettings = () => {
-            this.openSettings();
-        };
-
         window.leaveMeeting = () => {
             this.leaveMeeting();
         };
@@ -443,9 +381,6 @@ class MeetingManager {
             this.copyMeetingCode();
         };
 
-        window.applySettings = () => {
-            this.applySettings();
-        };
     }
 
     // Broadcast media state changes to other participants
@@ -457,72 +392,15 @@ class MeetingManager {
         };
 
         if (this.stompClient && this.stompClient.connected) {
-            this.stompClient.send(`/app/meeting/${this.meetingCode}/media-state`,
-                {}, JSON.stringify(mediaState)
-            );
+
+            // Calls handleMediaStateChange()
+            this.stompClient.send(`/app/meeting/${this.meetingCode}/media-state`,{}, JSON.stringify(mediaState));
         }
     }
 
     toggleParticipants() {
         const modal = new bootstrap.Modal(document.getElementById('participantsModal'));
         modal.show();
-    }
-
-    openSettings() {
-        const modal = new bootstrap.Modal(document.getElementById('settingsModal'));
-        this.loadDeviceSettings();
-        modal.show();
-    }
-
-    async loadDeviceSettings() {
-        try {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-
-            const cameras = devices.filter(device => device.kind === 'videoinput');
-            const microphones = devices.filter(device => device.kind === 'audioinput');
-            const speakers = devices.filter(device => device.kind === 'audiooutput');
-
-            this.populateDeviceSelect('cameraSelect', cameras);
-            this.populateDeviceSelect('microphoneSelect', microphones);
-            this.populateDeviceSelect('speakerSelect', speakers);
-        } catch (error) {
-            console.error('Error loading devices:', error);
-        }
-    }
-
-    populateDeviceSelect(selectId, devices) {
-        const select = document.getElementById(selectId);
-        select.innerHTML = '';
-
-        devices.forEach(device => {
-            const option = document.createElement('option');
-            option.value = device.deviceId;
-            option.textContent = device.label || `${device.kind} ${devices.indexOf(device) + 1}`;
-            select.appendChild(option);
-        });
-    }
-
-    async applySettings() {
-        try {
-            const cameraId = document.getElementById('cameraSelect').value;
-            const microphoneId = document.getElementById('microphoneSelect').value;
-
-            // Get new media with selected devices
-            const constraints = {
-                video: cameraId ? { deviceId: { exact: cameraId } } : true,
-                audio: microphoneId ? { deviceId: { exact: microphoneId } } : true
-            };
-
-            await this.webrtcManager.getUserMedia(constraints);
-
-            // Close modal
-            bootstrap.Modal.getInstance(document.getElementById('settingsModal')).hide();
-
-            this.showSuccess('Settings applied successfully');
-        } catch (error) {
-            console.error('Error applying settings:', error);
-            this.showError('Failed to apply settings');
-        }
     }
 
     async copyMeetingCode() {
@@ -629,18 +507,12 @@ class MeetingManager {
         this.showError(message);
     }
 
-    /** Escape HTML to prevent XSS */
-    // escapeHtml(text) {
-    //     const div = document.createElement('div');
-    //     div.textContent = text;
-    //     return div.innerHTML;
-    // }
-
     cleanup() {
-        console.log('Cleaning up meeting resources');
 
         // Send leave message
         if (this.stompClient && this.stompClient.connected) {
+
+            // Calls handleParticipantLeave()
             this.stompClient.send(`/app/meeting/${this.meetingCode}/leave`, {}, '{}');
         }
 

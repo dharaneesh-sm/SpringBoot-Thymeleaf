@@ -7,10 +7,6 @@ import lombok.AllArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/**
- * Participant entity to track who joins which meeting
- * This helps in managing meeting participants and their states
- */
 @Entity
 @Table(name = "participants")
 @Data

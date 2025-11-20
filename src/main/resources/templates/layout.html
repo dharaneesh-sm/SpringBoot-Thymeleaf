@@ -10,7 +10,8 @@
     <!-- Font Awesome for icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <!--    <link th:href="@{/css/style.css}" rel="stylesheet">-->
+    <link th:href="@{/css/styles.css}" rel="stylesheet">
+    <link th:href="@{/css/auth.css}" rel="stylesheet">
 
     <!-- Additional head content from child templates -->
     <th:block th:replace="${head} ?: ~{}"></th:block>
@@ -23,10 +24,63 @@
             <i class="fas fa-video"></i> Video Meeting
         </a>
 
-        <div class="navbar-nav ms-auto">
-            <a class="nav-link" th:href="@{/}">Home</a>
-            <a class="nav-link" th:href="@{/create-meeting}">Create Meeting</a>
-            <a class="nav-link" th:href="@{/join-meeting}">Join Meeting</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" th:href="@{/}">
+                    <i class="fas fa-home me-1"></i>Home
+                </a>
+                <a class="nav-link" th:href="@{/create-meeting}">
+                    <i class="fas fa-plus me-1"></i>Create Meeting
+                </a>
+                <a class="nav-link" th:href="@{/join-meeting}">
+                    <i class="fas fa-sign-in-alt me-1"></i>Join Meeting
+                </a>
+            </div>
+
+            <div class="navbar-nav ms-auto">
+                <!-- Authenticated User Menu -->
+                <div th:if="${sessionAuthenticated}" class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                       data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-user-circle me-1"></i>
+                        <span th:text="${sessionDisplayName ?: sessionUsername}">User</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <h6 class="dropdown-header">
+                                <i class="fas fa-user me-1"></i>
+                                <span th:text="${sessionDisplayName ?: sessionUsername}">User</span>
+                            </h6>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" th:href="@{/profile}">
+                                <i class="fas fa-cog me-2"></i>Profile Settings
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" th:href="@{/signout}">
+                                <i class="fas fa-sign-out-alt me-2"></i>Sign Out
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Guest/Unauthenticated Menu -->
+                <div th:unless="${sessionAuthenticated}">
+                    <a class="nav-link" th:href="@{/signin}">
+                        <i class="fas fa-sign-in-alt me-1"></i>Sign In
+                    </a>
+                    <a class="nav-link" th:href="@{/signup}">
+                        <i class="fas fa-user-plus me-1"></i>Sign Up
+                    </a>
+                </div>
+            </div>
         </div>
     </div>
 </nav>

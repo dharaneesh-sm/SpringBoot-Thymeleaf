@@ -39,8 +39,6 @@ public class Meeting {
     @Column(name = "status", nullable = false)
     private MeetingStatus status = MeetingStatus.ACTIVE;
 
-    // maxParticipants removed – unlimited participants
-
     // One-to-many relationship with participants
     @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<Participant> participants = new HashSet<>();
@@ -48,11 +46,6 @@ public class Meeting {
     // Helper method to check if meeting is active
     public boolean isActive() {
         return status == MeetingStatus.ACTIVE && endedAt == null;
-    }
-
-    // Helper method to get participant count
-    public int getParticipantCount() {
-        return participants.size();
     }
 }
 

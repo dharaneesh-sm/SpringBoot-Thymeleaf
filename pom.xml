@@ -63,6 +63,12 @@
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
 
+        <!-- Actuator for monitoring and management -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- Database -->
         <dependency>
             <groupId>org.postgresql</groupId>
@@ -77,13 +83,11 @@
         </dependency>
 
         <!-- PostgreSQL -->
-        <!--
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
-        -->
 
         <!-- Lombok for reducing boilerplate code -->
         <dependency>
@@ -123,6 +127,13 @@
             <artifactId>spring-boot-devtools</artifactId>
             <scope>runtime</scope>
             <optional>true</optional>
+        </dependency>
+
+        <!-- Swagger -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.6.0</version>
         </dependency>
 	</dependencies>
 

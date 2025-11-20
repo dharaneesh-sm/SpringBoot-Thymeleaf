@@ -20,7 +20,7 @@ import java.util.List;
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // Changed from AUTO to IDENTITY for better performance
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(unique = true, nullable = false, length = 50)

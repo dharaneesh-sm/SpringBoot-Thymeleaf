@@ -27,8 +27,8 @@ public class WebSocketController {
     private final ParticipantService participantService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    @MessageMapping("/meeting/{meetingCode}/join")
-    @SendTo("/topic/meeting/{meetingCode}/participants")
+    @MessageMapping("/meeting/{meetingCode}/join") //Maps WebSocket messages to handler methods
+    @SendTo("/topic/meeting/{meetingCode}/participants") //Automatically broadcasts return value to specified topic
     public Map<String, Object> handleParticipantJoin(
             @DestinationVariable String meetingCode,
             @Payload Map<String, String> joinData,
@@ -43,7 +43,6 @@ public class WebSocketController {
             if (meetingOpt.isPresent()) {
                 Meeting meeting = meetingOpt.get();
 
-                // Determine if this participant is the host
                 boolean isHost = meeting.getCreatedBy().equals(participantName);
 
                 // Add participant if not active already (idempotent join)
@@ -122,9 +121,7 @@ public class WebSocketController {
         return Map.of("type", "ERROR", "message", "Failed to leave meeting");
     }
 
-    /**
-     * Handle WebRTC signaling messages
-     */
+    /** Handle WebRTC signaling messages */
     @MessageMapping("/meeting/{meetingCode}/webrtc-signal")
     public void handleWebRTCSignaling(
             @DestinationVariable String meetingCode,

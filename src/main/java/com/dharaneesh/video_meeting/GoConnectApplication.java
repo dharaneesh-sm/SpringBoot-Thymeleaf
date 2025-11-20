@@ -14,7 +14,6 @@ public class GoConnectApplication {
                 "   Video Meeting Application Started Successfully!\n" +
                 "   \n" +
                 "   🌐 Application URL: http://localhost:8080\n" +
-                "   🗄️  H2 Console: http://localhost:8080/h2-console\n" +
                 "   📊 Management: http://localhost:8080/actuator\n" +
                 "   \n" +
                 "   Ready to host video meetings! 🎥\n" +

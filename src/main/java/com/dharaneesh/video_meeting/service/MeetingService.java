@@ -6,12 +6,12 @@ import com.dharaneesh.video_meeting.repository.MeetingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.springframework.scheduling.annotation.Async;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
+
 import java.util.Optional;
 
 @Service
@@ -36,11 +36,6 @@ public class MeetingService {
         log.info("Meeting created successfully with code: {}", code);
 
         return savedMeeting;
-    }
-
-    /** Overloaded method for backward compatibility */
-    public Meeting createMeeting(String username) {
-        return createMeeting(username, null);
     }
 
     @Transactional(readOnly = true)
@@ -76,29 +71,6 @@ public class MeetingService {
         return false;
     }
 
-    /** Gets active meetings for a user */
-    @Transactional(readOnly = true)
-    public List<Meeting> getActiveMeetingsForUser(String username) {
-        return meetingRepository.findByCreatedByAndStatus(username, MeetingStatus.ACTIVE);
-    }
-
-    @Async
-    public void cleanupExpiredMeetings() {
-        LocalDateTime expireTime = LocalDateTime.now().minusHours(24);
-        List<Meeting> expiredMeetings = meetingRepository.findExpiredMeetings(expireTime);
-
-        for (Meeting meeting : expiredMeetings) {
-            meeting.setStatus(MeetingStatus.ENDED);
-            meeting.setEndedAt(LocalDateTime.now());
-            log.info("Auto-ended expired meeting: {}", meeting.getMeetingCode());
-        }
-
-        if (!expiredMeetings.isEmpty()) {
-            meetingRepository.saveAll(expiredMeetings);
-            log.info("Cleaned up {} expired meetings", expiredMeetings.size());
-        }
-    }
-
     private String generateUniqueMeetingCode() {
         String code;
         int attempts = 0;
@@ -120,11 +92,4 @@ public class MeetingService {
         return code;
     }
 
-    public void updateMeeting(Meeting meeting) {
-        if (meeting == null || meeting.getId() == null) {
-            throw new IllegalArgumentException("Invalid meeting for update");
-        }
-        log.info("Updating meeting: {}", meeting.getMeetingCode());
-        meetingRepository.save(meeting);
-    }
 }

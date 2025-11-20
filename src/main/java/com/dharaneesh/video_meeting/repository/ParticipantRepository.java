@@ -9,9 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Repository for Participant entity
- */
+
 @Repository
 public interface ParticipantRepository extends JpaRepository<Participant, Long> {
 
@@ -21,8 +19,4 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
 
     // Find participant by session ID
     Optional<Participant> findBySessionId(String sessionId);
-
-    // Count active participants in a meeting
-    @Query("SELECT COUNT(p) FROM Participant p WHERE p.meeting.meetingCode = :meetingCode AND p.leftAt IS NULL")
-    long countActiveParticipantsByMeetingCode(@Param("meetingCode") String meetingCode);
 }

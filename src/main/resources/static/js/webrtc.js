@@ -1,14 +1,10 @@
 /**
  * WebRTC Implementation for Video Meeting
  *
- * What is WebRTC?
- * WebRTC (Web Real-Time Communication) is a technology that enables
- * peer-to-peer audio, video, and data sharing between browsers without plugins.
- *
  * Key Components:
  * 1. MediaStream - Captures audio/video from user's devices
  * 2. RTC Peer Connection - Manages the connection between peers
- * 3. RTC Data Channel - For sending arbitrary data (text, files, game state, etc.) peer-to-peer.
+ * 3. RTC Data Channel - For sending arbitrary data (text, files, state, etc.) peer-to-peer.
  * 4. Signaling - Exchange of connection information via WebSocket
  *  
  * - constructor(meetingCode, username, signalSender)
@@ -54,44 +50,35 @@ class WebRTCManager {
 
     async init() {
         try {
-            console.log('WebRTC Manager: Starting initialization...');
             await this.getUserMedia();
             this.setupEventListeners();
-            console.log('WebRTC Manager initialized successfully');
-        } catch (error) {
+        } 
+        catch (error) {
             console.error('Error initializing WebRTC:', error);
             this.handleError('Failed to access camera/microphone: ' + error.message);
-            // Don't throw error - let the meeting continue without video
         }
     }
 
     //Step 1: Get Local Media
     async getUserMedia() {
         try {
-            // Stop old tracks if any
+            // Stop existing tracks before requesting new ones
             if (this.localStream) {
-                this.localStream.getTracks().forEach(t => t.stop());
+                this.localStream.getTracks().forEach(track => track.stop());
             }
 
-            this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            // Request camera and microphone access
+            this.localStream = await navigator.mediaDevices.getUserMedia({ 
+                video: true, 
+                audio: true 
+            });
 
+            // Display local video
             const localVideo = document.getElementById('localVideo');
             if (localVideo) {
                 localVideo.srcObject = this.localStream;
             }
 
-            // If we already have peer connections, swap tracks to the new devices
-            for (const [, peerData] of this.peerConnections) {
-                const senders = peerData.connection.getSenders();
-                const audio = this.localStream.getAudioTracks()[0];
-                const video = this.localStream.getVideoTracks()[0];
-                const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
-                const videoSender = senders.find(s => s.track && s.track.kind === 'video');
-                if (audio && audioSender) await audioSender.replaceTrack(audio);
-                if (video && videoSender) await videoSender.replaceTrack(video);
-            }
-
-            console.log('Got local media stream');
             return this.localStream;
         } catch (error) {
             console.error('Error accessing media devices:', error);
@@ -115,18 +102,14 @@ class WebRTCManager {
 
             // Handle incoming remote stream
             peerConnection.ontrack = (event) => {
-                console.log('Received remote stream from:', remoteName, 'streams:', event.streams.length);
                 if (event.streams && event.streams[0]) {
                     this.handleRemoteStream(remoteSessionId, remoteName, event.streams[0]);
-                } else {
-                    console.warn('No stream in track event from:', remoteName);
                 }
             };
 
             // Handle ICE candidates
             peerConnection.onicecandidate = (event) => {
                 if (event.candidate) {
-                    console.log('Sending ICE candidate to:', remoteName);
                     this.signalSender.sendSignal({
                         type: 'ice-candidate',
                         data: event.candidate,
@@ -137,18 +120,14 @@ class WebRTCManager {
 
             // Handle connection state changes
             peerConnection.onconnectionstatechange = () => {
-                console.log(`Connection state with ${remoteName}:`, peerConnection.connectionState);
-
-                // Update global connection status based on any successful connection
                 if (peerConnection.connectionState === 'connected') {
                     this.updateConnectionStatus('connected');
                 } else if (peerConnection.connectionState === 'connecting') {
                     this.updateConnectionStatus('connecting');
-                } else if (peerConnection.connectionState === 'disconnected' || 
-                           peerConnection.connectionState === 'failed') {
+                } else if (peerConnection.connectionState === 'disconnected' ||
+                    peerConnection.connectionState === 'failed') {
                     this.handlePeerDisconnection(remoteSessionId);
-                    
-                    // Only show disconnected if no other peers are connected
+
                     const hasConnectedPeers = Array.from(this.peerConnections.values())
                         .some(peer => peer.connection.connectionState === 'connected');
                     if (!hasConnectedPeers) {
@@ -173,35 +152,26 @@ class WebRTCManager {
     //Step 3: Generate an SDP Offer (Signaling Begins)
     async createOffer(remoteSessionId, remoteName) {
         try {
-            console.log('📞 Creating offer for:', remoteName, remoteSessionId);
-            
-            // Check if we already have a connection to this peer
             if (this.peerConnections.has(remoteSessionId)) {
-                console.log('⚠️ Peer connection already exists for:', remoteName);
                 return;
             }
 
-            // Ensure we have local stream before creating offer
             if (!this.localStream) {
-                console.log('⏳ Waiting for local stream...');
                 await this.getUserMedia();
             }
-            
+
             const peerConnection = this.createPeerConnection(remoteSessionId, remoteName);
             if (!peerConnection) {
-                console.error('❌ Failed to create peer connection for:', remoteName);
+                console.error('Failed to create peer connection for:', remoteName);
                 return;
             }
 
-            // Create offer with proper constraints
             const offer = await peerConnection.createOffer({
                 offerToReceiveAudio: true,
                 offerToReceiveVideo: true
             });
-            
-            await peerConnection.setLocalDescription(offer);
 
-            console.log('📤 Sending offer to:', remoteName);
+            await peerConnection.setLocalDescription(offer);
 
             this.signalSender.sendSignal({
                 type: 'offer',
@@ -209,48 +179,37 @@ class WebRTCManager {
                 targetSessionId: remoteSessionId
             });
         } catch (error) {
-            console.error('❌ Error creating offer for', remoteName, ':', error);
+            console.error('Error creating offer for', remoteName, ':', error);
         }
     }
-    
+
     //Step 4: Handle incoming offer and send answer
     async handleOffer(fromSessionId, offer, fromName) {
         try {
-            console.log('📥 Handling offer from:', fromName || fromSessionId);
-            
-            // Ensure we have local stream
             if (!this.localStream) {
-                console.log('⏳ Getting local stream for answer...');
                 await this.getUserMedia();
             }
-            
-            // Get or create peer connection
+
             let peerConnection = this.peerConnections.get(fromSessionId)?.connection;
             if (!peerConnection) {
-                console.log('🔗 Creating new peer connection for offer from:', fromName);
                 peerConnection = this.createPeerConnection(fromSessionId, fromName || 'Unknown');
             } else {
-                // Update the name if we have a better one
                 const peerData = this.peerConnections.get(fromSessionId);
                 if (peerData && fromName && fromName !== 'Unknown' && peerData.name === 'Unknown') {
-                    console.log('🏷️ Updating peer name from Unknown to:', fromName);
                     peerData.name = fromName;
                 }
             }
-            
+
             if (!peerConnection) {
-                console.error('❌ Failed to create peer connection for offer');
+                console.error('Failed to create peer connection for offer');
                 return;
             }
 
-            // Set remote description and create answer
             await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-            console.log('✅ Set remote description for:', fromName);
-            
+
             // Process any queued ICE candidates
             const peerData = this.peerConnections.get(fromSessionId);
             if (peerData && peerData.queuedCandidates && peerData.queuedCandidates.length > 0) {
-                console.log('🧊 Processing', peerData.queuedCandidates.length, 'queued ICE candidates for:', fromName);
                 for (const candidate of peerData.queuedCandidates) {
                     try {
                         await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
@@ -260,11 +219,9 @@ class WebRTCManager {
                 }
                 peerData.queuedCandidates = [];
             }
-            
+
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
-
-            console.log('📤 Sending answer to:', fromName || fromSessionId);
 
             this.signalSender.sendSignal({
                 type: 'answer',
@@ -272,7 +229,7 @@ class WebRTCManager {
                 targetSessionId: fromSessionId
             });
         } catch (error) {
-            console.error('❌ Error handling offer from', fromName, ':', error);
+            console.error('Error handling offer from', fromName, ':', error);
         }
     }
 
@@ -282,11 +239,9 @@ class WebRTCManager {
             const peerData = this.peerConnections.get(fromSessionId);
             if (peerData && peerData.connection) {
                 await peerData.connection.setRemoteDescription(new RTCSessionDescription(answer));
-                console.log('✅ Set remote description from answer for:', peerData.name);
-                
+
                 // Process any queued ICE candidates
                 if (peerData.queuedCandidates && peerData.queuedCandidates.length > 0) {
-                    console.log('🧊 Processing', peerData.queuedCandidates.length, 'queued ICE candidates for:', peerData.name);
                     for (const candidate of peerData.queuedCandidates) {
                         try {
                             await peerData.connection.addIceCandidate(new RTCIceCandidate(candidate));
@@ -298,7 +253,7 @@ class WebRTCManager {
                 }
             }
         } catch (error) {
-            console.error('❌ Error handling answer:', error);
+            console.error('Error handling answer:', error);
         }
     }
 
@@ -306,53 +261,43 @@ class WebRTCManager {
         try {
             const peerData = this.peerConnections.get(fromSessionId);
             if (peerData && peerData.connection) {
-                // Check if remote description is set before adding ICE candidate
                 if (peerData.connection.remoteDescription) {
                     await peerData.connection.addIceCandidate(new RTCIceCandidate(candidate));
-                    console.log('🧊 Added ICE candidate from:', peerData.name);
                 } else {
-                    console.log('⏳ Queuing ICE candidate for:', peerData.name, '(no remote description yet)');
-                    // Store candidate for later if remote description isn't set yet
                     if (!peerData.queuedCandidates) {
                         peerData.queuedCandidates = [];
                     }
                     peerData.queuedCandidates.push(candidate);
                 }
-            } else {
-                console.warn('⚠️ No peer connection found for ICE candidate from:', fromSessionId);
             }
         } catch (error) {
-            console.error('❌ Error handling ICE candidate:', error);
+            console.error('Error handling ICE candidate:', error);
         }
     }
 
     handleRemoteStream(sessionId, participantName, stream) {
-        console.log('🎥 Handling remote stream for:', participantName, sessionId);
-        console.log('📊 Stream info - Tracks:', stream.getTracks().length, 
-                   'Video tracks:', stream.getVideoTracks().length, 
-                   'Audio tracks:', stream.getAudioTracks().length);
-        
-        // Check if video already exists
         let videoContainer = document.getElementById(`video-container-${sessionId}`);
-        
+
         if (videoContainer) {
-            // Update existing video stream
             const video = videoContainer.querySelector('video');
-            if (video) {
-                if (video.srcObject !== stream) {
-                    console.log('🔄 Updating existing video stream for:', participantName);
-                    video.srcObject = stream;
-                    
-                    // Force play
-                    video.play().catch(e => console.log('Play failed:', e));
-                } else {
-                    console.log('📺 Stream already set for:', participantName);
-                }
+            if (video && video.srcObject !== stream) {
+                video.srcObject = stream;
+
+                video.addEventListener('loadedmetadata', () => {
+                    if (video.videoWidth && video.videoHeight) {
+                        const aspectRatio = video.videoWidth / video.videoHeight;
+                        if (aspectRatio > 1.7 || video.videoWidth >= 1280) {
+                            videoContainer.classList.add('screen-sharing');
+                        } else {
+                            videoContainer.classList.remove('screen-sharing');
+                        }
+                    }
+                }, { once: true });
+
+                video.play().catch(e => console.error('Video play failed:', e));
             }
             return;
         }
-
-        console.log('🆕 Creating new video container for:', participantName);
 
         // Create new video container
         videoContainer = document.createElement('div');
@@ -365,40 +310,34 @@ class WebRTCManager {
         video.playsinline = true;
         video.muted = false; // Remote videos should not be muted
         video.controls = false;
-        
+
         // Set the stream immediately
         video.srcObject = stream;
 
-        // Add comprehensive event listeners
-        video.addEventListener('loadstart', () => {
-            console.log('📺 Video load started for:', participantName);
-        });
+        this.monitorVideoTrackState(stream, sessionId, participantName);
 
         video.addEventListener('loadedmetadata', () => {
-            console.log('📊 Video metadata loaded for:', participantName, 
-                       'Size:', video.videoWidth, 'x', video.videoHeight);
+            if (video.videoWidth && video.videoHeight) {
+                const aspectRatio = video.videoWidth / video.videoHeight;
+                if (aspectRatio > 1.7 || video.videoWidth >= 1280) {
+                    videoContainer.classList.add('screen-sharing');
+                } else {
+                    videoContainer.classList.remove('screen-sharing');
+                }
+            }
+            this.updateVideoPlaceholder(sessionId, participantName);
         });
 
         video.addEventListener('canplay', () => {
-            console.log('▶️ Video can play for:', participantName);
-            // Ensure it starts playing
-            video.play().catch(e => console.log('Auto-play failed:', e));
+            video.play().catch(e => console.error('Video play failed:', e));
         });
 
         video.addEventListener('playing', () => {
-            console.log('✅ Video is playing for:', participantName);
-        });
-
-        video.addEventListener('pause', () => {
-            console.log('⏸️ Video paused for:', participantName);
+            this.updateVideoPlaceholder(sessionId, participantName);
         });
 
         video.addEventListener('error', (e) => {
-            console.error('❌ Video error for:', participantName, e.target.error);
-        });
-
-        video.addEventListener('stalled', () => {
-            console.warn('⚠️ Video stalled for:', participantName);
+            console.error('Video error for:', participantName, e.target.error);
         });
 
         const overlay = document.createElement('div');
@@ -417,37 +356,36 @@ class WebRTCManager {
         videoContainer.appendChild(video);
         videoContainer.appendChild(overlay);
 
-        // Add to video grid
         const videoGrid = document.getElementById('videoGrid');
         if (videoGrid) {
             videoGrid.appendChild(videoContainer);
             this.updateVideoGrid();
-            console.log('✅ Added remote video container to grid for:', participantName, sessionId);
-            
-            // Try to start playing immediately
+
             setTimeout(() => {
-                video.play().catch(e => console.log('Delayed play failed:', e));
+                video.play().catch(e => console.error('Delayed video play failed:', e));
             }, 100);
         } else {
-            console.error('❌ Video grid not found!');
+            console.error('Video grid not found!');
         }
     }
 
     removePeer(sessionId) {
         const peerData = this.peerConnections.get(sessionId);
-        
+
         if (peerData && peerData.connection) {
             peerData.connection.close();
             this.peerConnections.delete(sessionId);
-            console.log('Closed peer connection for:', peerData.name);
         }
 
-        // Remove video element
+        if (this.trackMonitors && this.trackMonitors.has(sessionId)) {
+            clearInterval(this.trackMonitors.get(sessionId));
+            this.trackMonitors.delete(sessionId);
+        }
+
         const videoContainer = document.getElementById(`video-container-${sessionId}`);
         if (videoContainer) {
             videoContainer.remove();
             this.updateVideoGrid();
-            console.log('Removed video for:', sessionId);
         }
     }
 
@@ -473,7 +411,6 @@ class WebRTCManager {
                     if (muteIndicator) muteIndicator.style.display = 'none';
                 }
 
-                console.log('Microphone toggled:', this.isMuted ? 'muted' : 'unmuted');
                 return !this.isMuted;
             }
         }
@@ -501,7 +438,6 @@ class WebRTCManager {
                     this.hideVideoPlaceholder('localVideo');
                 }
 
-                console.log('Video toggled:', this.isVideoEnabled ? 'enabled' : 'disabled');
                 return this.isVideoEnabled;
             }
         }
@@ -551,7 +487,6 @@ class WebRTCManager {
             screenBtn.classList.add('btn-warning');
             screenBtn.innerHTML = '<i class="fas fa-stop"></i>';
 
-            console.log('Screen sharing started');
             return true;
         } catch (error) {
             console.error('Error starting screen share:', error);
@@ -596,8 +531,6 @@ class WebRTCManager {
             screenBtn.classList.remove('btn-warning');
             screenBtn.classList.add('btn-secondary');
             screenBtn.innerHTML = '<i class="fas fa-desktop"></i>';
-
-            console.log('Screen sharing stopped');
         } catch (error) {
             console.error('Error stopping screen share:', error);
         }
@@ -612,15 +545,13 @@ class WebRTCManager {
 
         videoGrid.className = 'video-grid';
         videoGrid.classList.add(`participants-${Math.min(count, 6)}`);
-
-        console.log('Updated video grid for', count, 'participants');
     }
 
     showVideoPlaceholder(videoId, name) {
         const video = document.getElementById(videoId);
         if (video && video.parentNode) {
             let placeholder = video.parentNode.querySelector('.video-placeholder');
-            
+
             if (!placeholder) {
                 placeholder = document.createElement('div');
                 placeholder.className = 'video-placeholder';
@@ -628,7 +559,7 @@ class WebRTCManager {
                     <i class="fas fa-user-circle"></i>
                     <div class="name">${name}</div>
                 `;
-//                video.style.display = 'none';
+                //                video.style.display = 'none';
                 video.parentNode.insertBefore(placeholder, video);
             }
         }
@@ -646,7 +577,6 @@ class WebRTCManager {
     }
 
     handlePeerDisconnection(sessionId) {
-        console.log('Peer disconnected:', sessionId);
         this.removePeer(sessionId);
     }
 
@@ -695,36 +625,125 @@ class WebRTCManager {
         window.addEventListener('beforeunload', () => {
             this.cleanup();
         });
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                console.log('Page hidden - preserving connections');
-            } else {
-                console.log('Page visible - resuming');
-            }
-        });
     }
 
     // Method to update participant name if we get better information
     updateParticipantName(sessionId, newName) {
         const peerData = this.peerConnections.get(sessionId);
         if (peerData && newName && newName !== 'Unknown') {
-            console.log('🏷️ Updating participant name for', sessionId, 'from', peerData.name, 'to', newName);
             peerData.name = newName;
-            
-            // Update the video overlay as well
+
             const videoContainer = document.getElementById(`video-container-${sessionId}`);
             if (videoContainer) {
                 const nameSpan = videoContainer.querySelector('.participant-name');
                 if (nameSpan) {
                     nameSpan.textContent = newName;
                 }
+
+                const placeholder = videoContainer.querySelector('.video-placeholder .name');
+                if (placeholder) {
+                    placeholder.textContent = newName;
+                }
             }
         }
     }
 
+    // Monitor video track state changes
+    monitorVideoTrackState(stream, sessionId, participantName) {
+        const videoTracks = stream.getVideoTracks();
+
+        videoTracks.forEach(track => {
+            track.addEventListener('ended', () => {
+                this.showRemoteVideoPlaceholder(sessionId, participantName);
+            });
+
+            // Monitor track enabled state changes
+            const checkTrackState = () => {
+                if (track.enabled) {
+                    this.hideRemoteVideoPlaceholder(sessionId);
+                } else {
+                    this.showRemoteVideoPlaceholder(sessionId, participantName);
+                }
+            };
+
+            // Check initial state
+            setTimeout(checkTrackState, 100);
+
+            // Set up periodic checking for track state changes
+            // Note: There's no direct event for track.enabled changes, so we poll
+            const trackMonitor = setInterval(() => {
+                if (track.readyState === 'ended') {
+                    clearInterval(trackMonitor);
+                    return;
+                }
+                checkTrackState();
+            }, 1000);
+
+            // Store monitor reference for cleanup
+            if (!this.trackMonitors) {
+                this.trackMonitors = new Map();
+            }
+            this.trackMonitors.set(sessionId, trackMonitor);
+        });
+    }
+
+    // Update video placeholder based on current track state
+    updateVideoPlaceholder(sessionId, participantName) {
+        const video = document.getElementById(`video-${sessionId}`);
+        if (video && video.srcObject) {
+            const videoTracks = video.srcObject.getVideoTracks();
+            const hasEnabledVideo = videoTracks.some(track => track.enabled && track.readyState === 'live');
+
+            if (hasEnabledVideo) {
+                this.hideRemoteVideoPlaceholder(sessionId);
+            } else {
+                this.showRemoteVideoPlaceholder(sessionId, participantName);
+            }
+        }
+    }
+
+    // Show placeholder for remote participant when video is disabled
+    showRemoteVideoPlaceholder(sessionId, participantName) {
+        const videoContainer = document.getElementById(`video-container-${sessionId}`);
+        if (!videoContainer) return;
+
+        let placeholder = videoContainer.querySelector('.video-placeholder');
+        if (placeholder) return;
+
+        placeholder = document.createElement('div');
+        placeholder.className = 'video-placeholder';
+        placeholder.innerHTML = `
+            <i class="fas fa-user-circle"></i>
+            <div class="name">${participantName || 'Participant'}</div>
+        `;
+
+        // Insert placeholder before video element
+        const video = videoContainer.querySelector('video');
+        if (video) {
+            videoContainer.insertBefore(placeholder, video);
+        } else {
+            videoContainer.appendChild(placeholder);
+        }
+    }
+
+    // Hide placeholder for remote participant when video is enabled
+    hideRemoteVideoPlaceholder(sessionId) {
+        const videoContainer = document.getElementById(`video-container-${sessionId}`);
+        if (!videoContainer) return;
+
+        const placeholder = videoContainer.querySelector('.video-placeholder');
+        if (placeholder) {
+            placeholder.remove();
+        }
+    }
+
     cleanup() {
-        console.log('Cleaning up WebRTC resources');
+        if (this.trackMonitors) {
+            for (const [sessionId, monitor] of this.trackMonitors) {
+                clearInterval(monitor);
+            }
+            this.trackMonitors.clear();
+        }
 
         for (const [sessionId, peerData] of this.peerConnections) {
             if (peerData.connection) {
