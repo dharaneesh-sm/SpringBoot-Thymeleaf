@@ -21,20 +21,15 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 // Disable CSRF for API endpoints and WebSocket
-                .csrf(csrf -> csrf
-                        .ignoringRequestMatchers("/api/**", "/ws/**", "/h2-console/**"))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/ws/**"))
 
                 // Configure authorization - allow most endpoints but let controllers handle auth
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/signin", "/signup", "/join-meeting",
                                 "/meeting/**", "/api/**", "/ws/**",
-                                "/css/**", "/js/**", "/images/**", "/favicon.ico",
-                                "/h2-console/**", "/actuator/**", "/swagger-ui/**", "/v3/**").permitAll()
-                        .requestMatchers("/create-meeting", "/profile/**", "/signout").permitAll() // Let controllers handle auth
+                                "/css/**", "/js/**", "/actuator/**").permitAll()
+                        .requestMatchers("/create-meeting", "/profile/**", "/signout").permitAll()
                         .anyRequest().authenticated())
-
-                // Disable frame options for H2 console
-                .headers(headers -> headers.frameOptions().disable())
 
                 // Disable HTTP Basic authentication
                 .httpBasic(httpBasic -> httpBasic.disable())

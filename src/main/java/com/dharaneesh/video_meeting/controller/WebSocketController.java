@@ -121,7 +121,6 @@ public class WebSocketController {
         return Map.of("type", "ERROR", "message", "Failed to leave meeting");
     }
 
-    /** Handle WebRTC signaling messages */
     @MessageMapping("/meeting/{meetingCode}/webrtc-signal")
     public void handleWebRTCSignaling(
             @DestinationVariable String meetingCode,

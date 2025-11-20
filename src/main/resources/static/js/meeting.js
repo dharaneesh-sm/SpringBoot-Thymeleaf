@@ -1,3 +1,8 @@
+// - Coordinates WebSocket signaling
+// - Manages participant lifecycle
+// - Bridges WebRTC and WebSocket communication
+// - Handles UI updates
+
 class MeetingManager {
     constructor() {
         this.meetingCode = window.meetingData.meetingCode;
@@ -250,6 +255,7 @@ class MeetingManager {
     handleMediaStateChange(data) {
         if (data.type === 'MEDIA_STATE_CHANGED') {
             const { sessionId, participantName, isMuted, videoEnabled } = data;
+            console.log('📡 Media state change:', { sessionId, participantName, isMuted, videoEnabled, mySessionId: this.sessionId });
 
             // Update participant in our list
             const participant = this.participants.get(sessionId);
@@ -263,11 +269,14 @@ class MeetingManager {
 
             // Handle video placeholder for remote participants
             if (this.webrtcManager && sessionId !== this.sessionId) {
+                console.log('🎬 Handling remote video placeholder:', videoEnabled ? 'HIDE' : 'SHOW');
                 if (videoEnabled) {
                     this.webrtcManager.hideRemoteVideoPlaceholder(sessionId);
                 } else {
                     this.webrtcManager.showRemoteVideoPlaceholder(sessionId, participantName);
                 }
+            } else {
+                console.log('ℹ️ Skipping placeholder (own video or no webrtcManager)');
             }
         }
     }

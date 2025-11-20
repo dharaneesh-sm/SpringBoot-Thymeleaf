@@ -144,25 +144,7 @@
     object-fit: contain;
 }
 
-/* Connection status indicators */
-.connection-status {
-    display: flex;
-    align-items: center;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.connection-status.connected {
-    color: #28a745;
-}
-
-.connection-status.connecting {
-    color: #ffc107;
-}
-
-.connection-status.disconnected {
-    color: #dc3545;
-}
+/* Connection status removed - feature not used */
 
 .chat-sidebar {
     width: 320px;
