@@ -104,6 +104,7 @@ public class AuthController {
             // Let service handle all other validations
             User user = userService.createUser(username, email, password, displayName);
 
+            // Creates an Session
             session.setAttribute("authenticated", true);
             session.setAttribute("username", user.getUsername());
             session.setAttribute("displayName", user.getDisplayName());

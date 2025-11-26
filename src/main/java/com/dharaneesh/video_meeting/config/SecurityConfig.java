@@ -20,14 +20,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                // Disable CSRF for API endpoints and WebSocket
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/ws/**"))
+                // Disable CSRF for API endpoints, WebSocket, and Actuator
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/**", "/ws/**", "/actuator/**"))
 
                 // Configure authorization - allow most endpoints but let controllers handle auth
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/signin", "/signup", "/join-meeting",
+                        .requestMatchers(
+                                "/", "/signin", "/signup", "/join-meeting",
                                 "/meeting/**", "/api/**", "/ws/**",
-                                "/css/**", "/js/**", "/actuator/**").permitAll()
+                                "/css/**", "/js/**", 
+                                "/actuator/**").permitAll()
                         .requestMatchers("/create-meeting", "/profile/**", "/signout").permitAll()
                         .anyRequest().authenticated())
 
@@ -36,7 +38,7 @@ public class SecurityConfig {
 
                 // Disable form login
                 .formLogin(formLogin -> formLogin.disable())
-                
+
                 // Configure session management
                 .sessionManagement(session -> session
                         .maximumSessions(1)

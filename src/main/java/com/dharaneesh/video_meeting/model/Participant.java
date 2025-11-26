@@ -18,8 +18,10 @@ public class Participant {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    /** In the `Participant` table, add a column called `meeting_id`,
+     Use it as a foreign key referencing the primary key of `Meeting` */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "meeting_id", nullable = false)
+    @JoinColumn(name = "meeting_id", nullable = false) //Foreign key column in Participant table
     private Meeting meeting;
 
     @Column(name = "participant_name", nullable = false, length = 100)

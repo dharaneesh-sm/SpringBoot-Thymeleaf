@@ -38,7 +38,8 @@ public class MeetingWebController {
             model.addAttribute("authenticated", true);
             model.addAttribute("username", session.getAttribute("username"));
             model.addAttribute("displayName", session.getAttribute("displayName"));
-        } else {
+        }
+        else {
             model.addAttribute("authenticated", false);
         }
         
@@ -303,12 +304,12 @@ public class MeetingWebController {
             StringBuilder jsData = new StringBuilder();
             jsData.append("{");
             jsData.append("\"meetingCode\":\"").append(meeting.getMeetingCode()).append("\",");
-            jsData.append("\"username\":\"").append(escapeJavaScript(username)).append("\",");
+            jsData.append("\"username\":\"").append(username).append("\",");
             jsData.append("\"isHost\":").append(isHost).append(",");
             jsData.append("\"participantCount\":").append(participantCount).append(",");
-            jsData.append("\"createdBy\":\"").append(escapeJavaScript(meeting.getCreatedBy())).append("\"");
+            jsData.append("\"createdBy\":\"").append(meeting.getCreatedBy()).append("\"");
             if (meeting.getMeetingTitle() != null) {
-                jsData.append(",\"meetingTitle\":\"").append(escapeJavaScript(meeting.getMeetingTitle())).append("\"");
+                jsData.append(",\"meetingTitle\":\"").append(meeting.getMeetingTitle()).append("\"");
             }
             jsData.append("}");
 
@@ -318,18 +319,7 @@ public class MeetingWebController {
             log.warn("Error creating JS data for meeting: {}", meeting.getMeetingCode(), e);
             // Return minimal safe data
             return String.format("{\"meetingCode\":\"%s\",\"username\":\"%s\",\"isHost\":%b}",
-                    meeting.getMeetingCode(), escapeJavaScript(username), isHost);
+                    meeting.getMeetingCode(), username, isHost);
         }
-    }
-
-    /** Escape JavaScript strings to prevent XSS */
-    private String escapeJavaScript(String input) {
-        if (input == null) return "";
-        return input.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("'", "\\'")
-                .replace("\r", "\\r")
-                .replace("\n", "\\n")
-                .replace("\t", "\\t");
     }
 }

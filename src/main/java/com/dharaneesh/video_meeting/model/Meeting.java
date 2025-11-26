@@ -35,17 +35,15 @@ public class Meeting {
     @Column(name = "ended_at")
     private LocalDateTime endedAt; // When meeting was ended
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private MeetingStatus status = MeetingStatus.ACTIVE;
-
-    // One-to-many relationship with participants
+    /** A single Meeting can have multiple Participant, 'meeting' is the field in Participant
+     fetch - Meeting loads participants only when needed.
+     cascasde - Saving/deleting Meeting affects all participants automatically. */
     @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<Participant> participants = new HashSet<>();
 
     // Helper method to check if meeting is active
     public boolean isActive() {
-        return status == MeetingStatus.ACTIVE && endedAt == null;
+        return endedAt == null;
     }
 }
 

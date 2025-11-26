@@ -1,7 +1,4 @@
-// - Coordinates WebSocket signaling
-// - Manages participant lifecycle
-// - Bridges WebRTC and WebSocket communication
-// - Handles UI updates
+// Coordinates WebSocket signaling, manages participants, and handles UI updates
 
 class MeetingManager {
     constructor() {
@@ -10,7 +7,6 @@ class MeetingManager {
         this.isHost = window.meetingData.isHost;
 
         // WebSocket connection
-        this.socket = null;
         this.stompClient = null;
 
         // WebRTC manager
@@ -18,11 +14,6 @@ class MeetingManager {
 
         // Chat manager
         this.chatManager = null;
-
-        // UI state
-        this.isChatOpen = false;
-        this.isParticipantsOpen = false;
-        this.unreadMessages = 0;
 
         // Participants list
         this.participants = new Map(); // sessionId -> participant data
@@ -58,77 +49,60 @@ class MeetingManager {
 
     connectWebSocket() {
         return new Promise((resolve, reject) => {
-            try {
-                this.socket = new SockJS('/ws');
-                this.stompClient = Stomp.over(this.socket);
-                this.stompClient.debug = null;
+            const socket = new SockJS('/ws');
+            this.stompClient = Stomp.over(socket);
+            this.stompClient.debug = null; // Disable debug logs
 
-                this.stompClient.connect({},
-                    (frame) => {
-                        this.setupWebSocketSubscriptions();
-                        resolve();
-                    },
-                    (error) => {
-                        console.error('WebSocket connection error:', error);
-                        reject(error);
-                    }
-                );
-            } catch (error) {
-                reject(error);
-            }
+            this.stompClient.connect({},
+                () => {
+                    this.setupWebSocketSubscriptions();
+                    resolve();
+                },
+                (error) => {
+                    console.error('WebSocket connection error:', error);
+                    reject(error);
+                }
+            );
         });
     }
 
     setupWebSocketSubscriptions() {
+        // Subscribe to participant updates (joins/leaves)
+        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/participants`, (message) => {
+            const data = JSON.parse(message.body);
+            this.handleParticipantUpdate(data);
+        });
 
-        // Subscribe to participant updates
-        // Response from handleParticipantJoin() and handleParticipantLeave()
-        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/participants`,
-            (message) => {
-                const data = JSON.parse(message.body);
-                this.handleParticipantUpdate(data);
-            }
-        );
+        // Subscribe to WebRTC signaling (offers, answers, ICE candidates)
+        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/webrtc-signal`, (message) => {
+            const data = JSON.parse(message.body);
+            this.handleWebRTCSignal(data);
+        });
 
-        // Subscribe to WebRTC signaling
-        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/webrtc-signal`,
-            (message) => {
-                const data = JSON.parse(message.body);
-                this.handleWebRTCSignal(data);
-            }
-        );
+        // Subscribe to media state changes (mute/unmute, video on/off)
+        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/media-state`, (message) => {
+            const data = JSON.parse(message.body);
+            this.handleMediaStateChange(data);
+        });
 
-        // Subscribe to media state changes
-        // Response from handleMediaStateChange()
-        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/media-state`,
-            (message) => {
-                const data = JSON.parse(message.body);
-                this.handleMediaStateChange(data);
-            }
-        );
-
-        // Subscribe to control messages (e.g., meeting ended)
-        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/control`,
-            (message) => {
-                const data = JSON.parse(message.body);
-                if (data.type === 'MEETING_ENDED') {
-                    if (this.chatManager) {
-                        this.chatManager.addSystemMessage(`Meeting ended by ${data.endedBy}`);
-                    }
-                    this.cleanup();
-                    window.location.href = '/';
+        // Subscribe to control messages (meeting ended)
+        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/control`, (message) => {
+            const data = JSON.parse(message.body);
+            if (data.type === 'MEETING_ENDED') {
+                if (this.chatManager) {
+                    this.chatManager.addSystemMessage(`Meeting ended by ${data.endedBy}`);
                 }
+                this.cleanup();
+                window.location.href = '/';
             }
-        );
+        });
     }
 
     joinMeeting() {
-        const joinMessage = {
-            participantName: this.username
-        };
+        const joinMessage = { participantName: this.username };
 
-        // Calls handleParticipantJoin()
-        this.stompClient.send(`/app/meeting/${this.meetingCode}/join`,{}, JSON.stringify(joinMessage));
+        //Calls handleParticipantJoin() on server
+        this.stompClient.send(`/app/meeting/${this.meetingCode}/join`, {}, JSON.stringify(joinMessage));
     }
 
     handleParticipantUpdate(data) {
@@ -136,41 +110,40 @@ class MeetingManager {
             const participant = data.participant;
             this.participants.set(participant.sessionId, participant);
 
+            // If this is us joining
             if (participant.name === this.username) {
                 this.sessionId = participant.sessionId;
 
-                // Create offers to existing participants
+                // Connect to existing participants with staggered timing
                 setTimeout(() => {
                     if (Array.isArray(data.participants)) {
                         const existingParticipants = data.participants.filter(p => p.name !== this.username);
-
                         existingParticipants.forEach((p, index) => {
                             setTimeout(() => {
-                                this.webrtcManager.createOffer(p.sessionId, p.name);
+                                this.webrtcManager.initiateConnection(p.sessionId, p.name);
                             }, index * 300);
                         });
                     }
                 }, 1000);
-            } else {
+            } 
+            // Someone else joined
+            else {
                 if (this.webrtcManager && this.sessionId) {
                     setTimeout(() => {
-                        this.webrtcManager.createOffer(participant.sessionId, participant.name);
+                        this.webrtcManager.initiateConnection(participant.sessionId, participant.name);
                     }, 500);
                 }
-
                 if (this.chatManager) {
                     this.chatManager.addSystemMessage(`${participant.name} joined the meeting`);
                 }
             }
-
-        } else if (data.type === 'PARTICIPANT_LEFT') {
-            const sessionId = data.sessionId;
-            const participant = this.participants.get(sessionId);
-
+        } 
+        else if (data.type === 'PARTICIPANT_LEFT') {
+            const participant = this.participants.get(data.sessionId);
             if (participant) {
-                this.participants.delete(sessionId);
+                this.participants.delete(data.sessionId);
                 if (this.webrtcManager) {
-                    this.webrtcManager.removePeer(sessionId);
+                    this.webrtcManager.removePeer(data.sessionId);
                 }
                 if (this.chatManager) {
                     this.chatManager.addSystemMessage(`${participant.name} left the meeting`);
@@ -178,22 +151,21 @@ class MeetingManager {
             }
         }
 
-        // Update UI
+        // Update participant count in UI
         if (data.participantCount !== undefined) {
             this.updateParticipantCount(data.participantCount);
         }
 
+        // Update full participants list
         if (data.participants) {
-            // Update participants map with full list
             data.participants.forEach(p => {
                 if (p.sessionId && p.name) {
                     this.participants.set(p.sessionId, p);
                 }
             });
-
             this.updateParticipantsList(data.participants);
 
-            // Update WebRTC participant names if we have better information
+            // Update participant names in WebRTC connections
             if (this.webrtcManager) {
                 data.participants.forEach(p => {
                     if (p.sessionId && p.name) {
@@ -207,14 +179,9 @@ class MeetingManager {
     handleWebRTCSignal(data) {
         const { type, fromSessionId, targetSessionId } = data;
 
-        // Ignore messages not intended for us or our own messages
-        if (targetSessionId && targetSessionId !== "" && this.sessionId && targetSessionId !== this.sessionId) {
-            return;
-        }
-
-        if (this.sessionId && fromSessionId === this.sessionId) {
-            return;
-        }
+        // Ignore messages not for us or from ourselves
+        if (targetSessionId && targetSessionId !== this.sessionId) return;
+        if (fromSessionId === this.sessionId) return;
 
         // Get participant name
         let fromName = 'Unknown';
@@ -228,7 +195,7 @@ class MeetingManager {
             }
         }
 
-        // Process the signal
+        // Route signal to WebRTC manager
         if (this.webrtcManager) {
             switch (type) {
                 case 'offer':
@@ -246,37 +213,31 @@ class MeetingManager {
 
     sendSignal(signalData) {
         if (this.stompClient && this.stompClient.connected) {
-
-            // Calls handleWebRTCSignaling()
-            this.stompClient.send(`/app/meeting/${this.meetingCode}/webrtc-signal`,{}, JSON.stringify(signalData));
+            this.stompClient.send(`/app/meeting/${this.meetingCode}/webrtc-signal`, {}, JSON.stringify(signalData));
         }
     }
 
     handleMediaStateChange(data) {
         if (data.type === 'MEDIA_STATE_CHANGED') {
             const { sessionId, participantName, isMuted, videoEnabled } = data;
-            console.log('📡 Media state change:', { sessionId, participantName, isMuted, videoEnabled, mySessionId: this.sessionId });
 
-            // Update participant in our list
+            // Update participant data
             const participant = this.participants.get(sessionId);
             if (participant) {
                 participant.isMuted = isMuted;
                 participant.videoEnabled = videoEnabled;
             }
 
-            // Update video overlay
+            // Update video overlay (mute indicator)
             this.updateParticipantVideoOverlay(sessionId, { isMuted, videoEnabled });
 
-            // Handle video placeholder for remote participants
+            // Show/hide video placeholder for remote participants
             if (this.webrtcManager && sessionId !== this.sessionId) {
-                console.log('🎬 Handling remote video placeholder:', videoEnabled ? 'HIDE' : 'SHOW');
                 if (videoEnabled) {
                     this.webrtcManager.hideRemoteVideoPlaceholder(sessionId);
                 } else {
                     this.webrtcManager.showRemoteVideoPlaceholder(sessionId, participantName);
                 }
-            } else {
-                console.log('ℹ️ Skipping placeholder (own video or no webrtcManager)');
             }
         }
     }
@@ -336,14 +297,14 @@ class MeetingManager {
     }
 
     setupUIEventListeners() {
-        // Setup global functions for button clicks
+        // Media controls
         window.toggleMicrophone = () => {
-            const enabled = this.webrtcManager.toggleMicrophone();
+            this.webrtcManager.toggleMicrophone();
             this.broadcastMediaState();
         };
 
         window.toggleVideo = () => {
-            const enabled = this.webrtcManager.toggleVideo();
+            this.webrtcManager.toggleVideo();
             this.broadcastMediaState();
         };
 
@@ -355,44 +316,30 @@ class MeetingManager {
             }
         };
 
-        // Chat handlers delegate to ChatManager when available
+        // Chat controls
         window.toggleChat = () => {
             if (this.chatManager) {
                 this.chatManager.toggleChat();
             }
         };
-
         window.sendChatMessage = () => {
             if (this.chatManager) {
                 this.chatManager.sendChatMessage();
             }
         };
-
         window.handleChatKeyPress = (event) => {
             if (event.key === 'Enter' && this.chatManager) {
                 this.chatManager.sendChatMessage();
             }
         };
 
-        window.toggleParticipants = () => {
-            this.toggleParticipants();
-        };
-
-        window.leaveMeeting = () => {
-            this.leaveMeeting();
-        };
-
-        window.endMeeting = () => {
-            this.endMeeting();
-        };
-
-        window.copyMeetingCode = () => {
-            this.copyMeetingCode();
-        };
-
+        // Meeting controls
+        window.toggleParticipants = () => this.toggleParticipants();
+        window.leaveMeeting = () => this.leaveMeeting();
+        window.endMeeting = () => this.endMeeting();
+        window.copyMeetingCode = () => this.copyMeetingCode();
     }
 
-    // Broadcast media state changes to other participants
     broadcastMediaState() {
         const mediaState = {
             participantName: this.username,
@@ -401,9 +348,7 @@ class MeetingManager {
         };
 
         if (this.stompClient && this.stompClient.connected) {
-
-            // Calls handleMediaStateChange()
-            this.stompClient.send(`/app/meeting/${this.meetingCode}/media-state`,{}, JSON.stringify(mediaState));
+            this.stompClient.send(`/app/meeting/${this.meetingCode}/media-state`, {}, JSON.stringify(mediaState));
         }
     }
 
@@ -417,17 +362,15 @@ class MeetingManager {
             await navigator.clipboard.writeText(this.meetingCode);
             this.showSuccess('Meeting code copied to clipboard!');
         } catch (error) {
-            console.error('Error copying to clipboard:', error);
-
             // Fallback for older browsers
             const textArea = document.createElement('textarea');
             textArea.value = this.meetingCode;
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
             document.body.appendChild(textArea);
-            textArea.focus();
             textArea.select();
             document.execCommand('copy');
             document.body.removeChild(textArea);
-
             this.showSuccess('Meeting code copied to clipboard!');
         }
     }
@@ -486,29 +429,24 @@ class MeetingManager {
     }
 
     showAlert(message, type = 'info') {
+        const iconMap = {
+            success: 'fa-check-circle',
+            danger: 'fa-exclamation-circle',
+            info: 'fa-info-circle'
+        };
+
         const alert = document.createElement('div');
         alert.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-        alert.style.top = '80px';
-        alert.style.right = '20px';
-        alert.style.zIndex = '9999';
-        alert.style.minWidth = '300px';
-
-        const iconClass = type === 'success' ? 'fa-check-circle' :
-            type === 'danger' ? 'fa-exclamation-circle' : 'fa-info-circle';
-
+        alert.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
         alert.innerHTML = `
-            <i class="fas ${iconClass}"></i> ${message}
+            <i class="fas ${iconMap[type]}"></i> ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
 
         document.body.appendChild(alert);
 
         // Auto remove after 4 seconds
-        setTimeout(() => {
-            if (alert.parentNode) {
-                alert.remove();
-            }
-        }, 4000);
+        setTimeout(() => alert.remove(), 4000);
     }
 
     handleError(message) {
@@ -517,15 +455,12 @@ class MeetingManager {
     }
 
     cleanup() {
-
         // Send leave message
         if (this.stompClient && this.stompClient.connected) {
-
-            // Calls handleParticipantLeave()
             this.stompClient.send(`/app/meeting/${this.meetingCode}/leave`, {}, '{}');
         }
 
-        // Cleanup WebRTC
+        // Cleanup WebRTC connections
         if (this.webrtcManager) {
             this.webrtcManager.cleanup();
         }

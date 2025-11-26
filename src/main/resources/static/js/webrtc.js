@@ -34,28 +34,32 @@ class WebRTCManager {
 
     async init() {
         try {
-            await this.getUserMedia();
+            await this.initializeLocalMedia();
             this.setupEventListeners();
-        } catch (error) {
+        } 
+        catch (error) {
             console.error('Error initializing WebRTC:', error);
         }
     }
 
-    //Step 1: Get Local Media
-    async getUserMedia() {
+    //Step 1: Initialize Local Media (Camera & Microphone)
+    async initializeLocalMedia() {
         try {
             // Stop existing tracks before requesting new ones
-            if (this.localStream) this.localStream.getTracks().forEach(track => track.stop());
+            if (this.localStream) 
+                this.localStream.getTracks().forEach(track => track.stop());
 
-            // Request camera and microphone access
+            // Request camera and microphone access using browser API
             this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
             // Display local video
             const localVideo = document.getElementById('localVideo');
-            if (localVideo) localVideo.srcObject = this.localStream;
+            if (localVideo) 
+                localVideo.srcObject = this.localStream;
 
             return this.localStream;
-        } catch (error) {
+        } 
+        catch (error) {
             console.error('Error accessing media devices:', error);
             throw error;
         }
@@ -75,6 +79,7 @@ class WebRTCManager {
             }
 
             // Handle incoming remote tracks
+            // This handler waits for remote peer to send tracks.
             peerConnection.ontrack = (event) => {
                 if (event.streams?.[0]) {
                     this.handleRemoteStream(remoteSessionId, remoteName, event.streams[0]);
@@ -113,14 +118,14 @@ class WebRTCManager {
         }
     }
 
-    //Step 3: Generate an SDP Offer (Signaling Begins)
-    async createOffer(remoteSessionId, remoteName) {
+    //Step 3: Initiate Connection to Remote Peer
+    async initiateConnection(remoteSessionId, remoteName) {
         try {
             // Avoid duplicate connections
             if (this.peerConnections.has(remoteSessionId)) return;
 
             // Ensure local media is ready
-            if (!this.localStream) await this.getUserMedia();
+            if (!this.localStream) await this.initializeLocalMedia();
 
             // Create peer connection
             const peerConnection = this.createPeerConnection(remoteSessionId, remoteName);
@@ -129,13 +134,14 @@ class WebRTCManager {
                 return;
             }
 
-            // Start signaling by creating an offer
+            // Generate SDP offer using WebRTC API
             const offer = await peerConnection.createOffer({
                 offerToReceiveAudio: true,
                 offerToReceiveVideo: true
             });
 
             // Set as local description (ready for answer)
+            // This triggers ICE gathering, onicecandidate events start firing, Handler catches them.
             await peerConnection.setLocalDescription(offer);
 
             // Send the offer via signaling server
@@ -144,8 +150,9 @@ class WebRTCManager {
                 data: offer,
                 targetSessionId: remoteSessionId
             });
-        } catch (error) {
-            console.error('Error creating offer for', remoteName, ':', error);
+        } 
+        catch (error) {
+            console.error('Error initiating connection to', remoteName, ':', error);
         }
     }
 
@@ -153,13 +160,14 @@ class WebRTCManager {
     async handleOffer(fromSessionId, offer, fromName) {
         try {
             // Ensure local media is ready
-            if (!this.localStream) await this.getUserMedia();
+            if (!this.localStream) await this.initializeLocalMedia();
 
             // Get or create peer connection
             let peerConnection = this.peerConnections.get(fromSessionId)?.connection;
             if (!peerConnection) {
                 peerConnection = this.createPeerConnection(fromSessionId, fromName || 'Unknown');
-            } else {
+            } 
+            else {
                 // Update name if we have better information
                 const peerData = this.peerConnections.get(fromSessionId);
                 if (peerData && fromName && fromName !== 'Unknown' && peerData.name === 'Unknown') {
@@ -424,7 +432,8 @@ class WebRTCManager {
             screenBtn.innerHTML = '<i class="fas fa-stop"></i>';
 
             return true;
-        } catch (error) {
+        } 
+        catch (error) {
             console.error('Error starting screen share:', error);
             return false;
         }
@@ -459,7 +468,8 @@ class WebRTCManager {
             screenBtn.classList.remove('btn-warning');
             screenBtn.classList.add('btn-secondary');
             screenBtn.innerHTML = '<i class="fas fa-desktop"></i>';
-        } catch (error) {
+        }
+        catch (error) {
             console.error('Error stopping screen share:', error);
         }
     }
@@ -529,7 +539,7 @@ class WebRTCManager {
     }
 
     showRemoteVideoPlaceholder(sessionId, participantName) {
-        console.log('🎭 showRemoteVideoPlaceholder called for:', participantName, sessionId);
+        console.log('showRemoteVideoPlaceholder called for:', participantName, sessionId);
         const videoContainer = document.getElementById(`video-container-${sessionId}`);
         if (!videoContainer) {
             console.warn('❌ Video container not found for:', sessionId);
@@ -538,7 +548,7 @@ class WebRTCManager {
 
         let placeholder = videoContainer.querySelector('.video-placeholder');
         if (placeholder) {
-            console.log('✅ Placeholder already exists for:', participantName);
+            console.log('Placeholder already exists for:', participantName);
             return;
         }
 
@@ -560,7 +570,7 @@ class WebRTCManager {
     hideRemoteVideoPlaceholder(sessionId) {
         const videoContainer = document.getElementById(`video-container-${sessionId}`);
         if (!videoContainer) {
-            console.warn('❌ Video container not found for:', sessionId);
+            console.warn('Video container not found for:', sessionId);
             return;
         }
 

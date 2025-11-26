@@ -28,11 +28,10 @@ public class WebSocketController {
     private final SimpMessagingTemplate messagingTemplate;
 
     @MessageMapping("/meeting/{meetingCode}/join") //Maps WebSocket messages to handler methods
-    @SendTo("/topic/meeting/{meetingCode}/participants") //Automatically broadcasts return value to specified topic
-    public Map<String, Object> handleParticipantJoin(
-            @DestinationVariable String meetingCode,
-            @Payload Map<String, String> joinData,
-            @Header("simpSessionId") String sessionId) {
+    @SendTo("/topic/meeting/{meetingCode}/participants") //Server broadcasts message to specified topic
+    public Map<String, Object> handleParticipantJoin(@DestinationVariable String meetingCode,
+                                                     @Payload Map<String, String> joinData,
+                                                     @Header("simpSessionId") String sessionId) {
 
         try {
             String participantName = joinData.get("participantName");
@@ -86,9 +85,8 @@ public class WebSocketController {
 
     @MessageMapping("/meeting/{meetingCode}/leave")
     @SendTo("/topic/meeting/{meetingCode}/participants")
-    public Map<String, Object> handleParticipantLeave(
-            @DestinationVariable String meetingCode,
-            @Header("simpSessionId") String sessionId) {
+    public Map<String, Object> handleParticipantLeave(@DestinationVariable String meetingCode,
+                                                      @Header("simpSessionId") String sessionId) {
 
         try {
             log.info("Participant with session {} leaving meeting {}", sessionId, meetingCode);
@@ -114,7 +112,8 @@ public class WebSocketController {
                     "timestamp", LocalDateTime.now().toString()
             );
 
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Error handling participant leave", e);
         }
 
@@ -122,10 +121,8 @@ public class WebSocketController {
     }
 
     @MessageMapping("/meeting/{meetingCode}/webrtc-signal")
-    public void handleWebRTCSignaling(
-            @DestinationVariable String meetingCode,
-            @Payload Map<String, Object> signalData,
-            @Header("simpSessionId") String sessionId) {
+    public void handleWebRTCSignaling(@DestinationVariable String meetingCode,
+                                      @Payload Map<String, Object> signalData, @Header("simpSessionId") String sessionId) {
 
         try {
             String fromSessionId = sessionId;
@@ -133,8 +130,7 @@ public class WebSocketController {
             String type = (String) signalData.get("type");
             Object data = signalData.get("data");
 
-            log.debug("WebRTC signal {} from {} to {} in meeting {}",
-                    type, fromSessionId, toSessionId, meetingCode);
+            log.debug("WebRTC signal {} from {} to {} in meeting {}", type, fromSessionId, toSessionId, meetingCode);
 
             // Prepare the message to forward
             Map<String, Object> forwardMessage = Map.of(
@@ -146,24 +142,20 @@ public class WebSocketController {
             );
 
             // Broadcast to all participants in the meeting
-            messagingTemplate.convertAndSend(
-                    "/topic/meeting/" + meetingCode + "/webrtc-signal",
-                    forwardMessage
-            );
+            messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode + "/webrtc-signal", forwardMessage);
             
             log.debug("Broadcast {} signal to meeting {}", type, meetingCode);
 
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Error handling WebRTC signaling", e);
         }
     }
 
     @MessageMapping("/meeting/{meetingCode}/chat")
     @SendTo("/topic/meeting/{meetingCode}/chat")
-    public Map<String, Object> handleChatMessage(
-            @DestinationVariable String meetingCode,
-            @Payload Map<String, String> chatData,
-            Principal principal) {
+    public Map<String, Object> handleChatMessage(@DestinationVariable String meetingCode,
+                                                 @Payload Map<String, String> chatData, Principal principal) {
 
         try {
             String message = chatData.get("message");
@@ -178,7 +170,8 @@ public class WebSocketController {
                     "timestamp", LocalDateTime.now().toString()
             );
 
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Error handling chat message", e);
         }
 
@@ -187,10 +180,9 @@ public class WebSocketController {
 
     @MessageMapping("/meeting/{meetingCode}/media-state")
     @SendTo("/topic/meeting/{meetingCode}/media-state")
-    public Map<String, Object> handleMediaStateChange(
-            @DestinationVariable String meetingCode,
-            @Payload Map<String, Object> mediaData,
-            @Header("simpSessionId") String sessionId) {
+    public Map<String, Object> handleMediaStateChange(@DestinationVariable String meetingCode,
+                                                      @Payload Map<String, Object> mediaData,
+                                                      @Header("simpSessionId") String sessionId) {
 
         try {
             Boolean isMuted = (Boolean) mediaData.get("isMuted");
@@ -200,8 +192,7 @@ public class WebSocketController {
             // Update participant state in database
             participantService.updateParticipantMediaState(sessionId, isMuted, videoEnabled);
 
-            log.debug("Media state updated for {} in meeting {}: muted={}, video={}",
-                    participantName, meetingCode, isMuted, videoEnabled);
+            log.debug("Media state updated for {} in meeting {}: muted={}, video={}", participantName, meetingCode, isMuted, videoEnabled);
 
             return Map.of(
                     "type", "MEDIA_STATE_CHANGED",
@@ -212,7 +203,8 @@ public class WebSocketController {
                     "timestamp", LocalDateTime.now().toString()
             );
 
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Error handling media state change", e);
         }
 

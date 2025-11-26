@@ -2,6 +2,7 @@ package com.dharaneesh.video_meeting.service;
 
 import com.dharaneesh.video_meeting.model.Meeting;
 import com.dharaneesh.video_meeting.model.Participant;
+import com.dharaneesh.video_meeting.repository.MeetingRepository;
 import com.dharaneesh.video_meeting.repository.ParticipantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,7 @@ import java.util.Optional;
 public class ParticipantService {
 
     private final ParticipantRepository participantRepository;
+    private final MeetingRepository meetingRepository;
 
     public Participant addParticipant(Meeting meeting, String participantName, String sessionId) {
         Participant participant = new Participant();
@@ -48,8 +50,16 @@ public class ParticipantService {
             p.setLeftAt(LocalDateTime.now());
             participantRepository.save(p);
 
-            log.info("Participant {} left meeting {}",
-                    p.getParticipantName(), p.getMeeting().getMeetingCode());
+            log.info("Participant {} left meeting {}", p.getParticipantName(), p.getMeeting().getMeetingCode());
+
+            Meeting meeting = p.getMeeting();
+            List<Participant> remaining = getActiveParticipants(meeting.getMeetingCode());
+
+            if(remaining.isEmpty() && meeting.getEndedAt() == null) {
+                meeting.setEndedAt(LocalDateTime.now());
+                meetingRepository.save(meeting);
+                log.info("Meeting {} auto ended - no participants remaining", meeting.getMeetingCode());
+            }
         }
     }
 

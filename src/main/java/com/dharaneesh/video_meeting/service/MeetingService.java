@@ -1,7 +1,6 @@
 package com.dharaneesh.video_meeting.service;
 
 import com.dharaneesh.video_meeting.model.Meeting;
-import com.dharaneesh.video_meeting.model.MeetingStatus;
 import com.dharaneesh.video_meeting.repository.MeetingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +29,6 @@ public class MeetingService {
         meeting.setMeetingCode(code);
         meeting.setCreatedBy(username);
         meeting.setMeetingTitle(meetingTitle);
-        meeting.setStatus(MeetingStatus.ACTIVE);
 
         Meeting savedMeeting = meetingRepository.save(meeting);
         log.info("Meeting created successfully with code: {}", code);
@@ -60,7 +58,6 @@ public class MeetingService {
 
             // Only creator can end the meeting
             if (meeting.getCreatedBy().equals(username)) {
-                meeting.setStatus(MeetingStatus.ENDED);
                 meeting.setEndedAt(LocalDateTime.now());
                 meetingRepository.save(meeting);
 
