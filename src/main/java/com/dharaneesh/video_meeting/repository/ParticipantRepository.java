@@ -13,7 +13,7 @@ import java.util.Optional;
 @Repository
 public interface ParticipantRepository extends JpaRepository<Participant, Long> {
 
-    // Find active participants in a meeting
+    // Find active participants in a meeting (JPQL Query)
     @Query("SELECT p FROM Participant p WHERE p.meeting.meetingCode = :meetingCode AND p.leftAt IS NULL")
     List<Participant> findActiveParticipantsByMeetingCode(@Param("meetingCode") String meetingCode);
 

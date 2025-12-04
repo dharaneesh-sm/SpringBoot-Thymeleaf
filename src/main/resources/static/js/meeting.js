@@ -24,14 +24,12 @@ class MeetingManager {
 
     async init() {
         try {
+
             this.showLoading('Connecting to meeting...');
+        
             await this.connectWebSocket();
 
-            this.webrtcManager = new WebRTCManager(
-                this.meetingCode,
-                this.username,
-                this
-            );
+            this.webrtcManager = new WebRTCManager(this.meetingCode, this.username, this);
 
             if (window.ChatManager) {
                 this.chatManager = new ChatManager(this.meetingCode, this.username, this.stompClient);
@@ -39,8 +37,10 @@ class MeetingManager {
 
             this.setupUIEventListeners();
             this.joinMeeting();
-            this.hideLoading();
-        } catch (error) {
+
+            this.hideLoading(); // Everything is set up
+        } 
+        catch (error) {
             console.error('Error initializing meeting manager:', error);
             this.handleError('Failed to connect to meeting: ' + error.message);
             this.hideLoading();
@@ -66,26 +66,28 @@ class MeetingManager {
         });
     }
 
+    // 5 WebSocket Channels
     setupWebSocketSubscriptions() {
-        // Subscribe to participant updates (joins/leaves)
-        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/participants`, (message) => {
-            const data = JSON.parse(message.body);
-            this.handleParticipantUpdate(data);
-        });
 
-        // Subscribe to WebRTC signaling (offers, answers, ICE candidates)
+        // 1. Subscribe to WebRTC signaling (Exchange SDP offers, answers, and ICE candidates for WebRTC connections)
         this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/webrtc-signal`, (message) => {
             const data = JSON.parse(message.body);
             this.handleWebRTCSignal(data);
         });
 
-        // Subscribe to media state changes (mute/unmute, video on/off)
+        // 2. Subscribe to participant updates (Notify when users join/leave the meeting)
+        this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/participants`, (message) => {
+            const data = JSON.parse(message.body);
+            this.handleParticipantUpdate(data);
+        });
+
+        // 3. Subscribe to media state changes (Notify when users mute/unmute or turn video on/off)
         this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/media-state`, (message) => {
             const data = JSON.parse(message.body);
             this.handleMediaStateChange(data);
         });
 
-        // Subscribe to control messages (meeting ended)
+        // 5. Subscribe to control messages (meeting ended)
         this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/control`, (message) => {
             const data = JSON.parse(message.body);
             if (data.type === 'MEETING_ENDED') {
@@ -107,7 +109,10 @@ class MeetingManager {
 
     handleParticipantUpdate(data) {
         if (data.type === 'PARTICIPANT_JOINED') {
+
             const participant = data.participant;
+
+            // Store in Map (in-memory)
             this.participants.set(participant.sessionId, participant);
 
             // If this is us joining
@@ -133,21 +138,24 @@ class MeetingManager {
                         this.webrtcManager.initiateConnection(participant.sessionId, participant.name);
                     }, 500);
                 }
-                if (this.chatManager) {
+
+                if (this.chatManager)
                     this.chatManager.addSystemMessage(`${participant.name} joined the meeting`);
-                }
             }
         } 
         else if (data.type === 'PARTICIPANT_LEFT') {
             const participant = this.participants.get(data.sessionId);
             if (participant) {
+                // Remove from Map
                 this.participants.delete(data.sessionId);
-                if (this.webrtcManager) {
+
+                // Close WebRTC connection
+                if (this.webrtcManager)
                     this.webrtcManager.removePeer(data.sessionId);
-                }
-                if (this.chatManager) {
+
+                // Show chat system message
+                if (this.chatManager)
                     this.chatManager.addSystemMessage(`${participant.name} left the meeting`);
-                }
             }
         }
 
@@ -158,11 +166,14 @@ class MeetingManager {
 
         // Update full participants list
         if (data.participants) {
+
+            // Update Map with latest data
             data.participants.forEach(p => {
                 if (p.sessionId && p.name) {
                     this.participants.set(p.sessionId, p);
                 }
             });
+
             this.updateParticipantsList(data.participants);
 
             // Update participant names in WebRTC connections
@@ -188,7 +199,8 @@ class MeetingManager {
         const participant = this.participants.get(fromSessionId);
         if (participant && participant.name) {
             fromName = participant.name;
-        } else if (this.webrtcManager) {
+        }
+        else if (this.webrtcManager) {
             const peerData = this.webrtcManager.peerConnections.get(fromSessionId);
             if (peerData && peerData.name) {
                 fromName = peerData.name;
@@ -408,16 +420,18 @@ class MeetingManager {
         }
     }
 
+    // Show the loading overlay
     showLoading(message = 'Loading...') {
         const overlay = document.getElementById('loadingOverlay');
         const text = overlay.querySelector('p');
-        text.textContent = message;
-        overlay.style.display = 'flex';
+        text.textContent = message; // Update message
+        overlay.style.display = 'flex'; // Make it visible
     }
 
+    // Hide the loading overlay
     hideLoading() {
         const overlay = document.getElementById('loadingOverlay');
-        overlay.style.display = 'none';
+        overlay.style.display = 'none'; // Make it hidden
     }
 
     showSuccess(message) {

@@ -232,9 +232,6 @@ public class MeetingWebController {
             model.addAttribute("createdBy", meeting.getCreatedBy());
             model.addAttribute("createdAt", meeting.getCreatedAt());
 
-            // Add meeting metadata for JavaScript
-            model.addAttribute("meetingData", createMeetingJSData(meeting, cleanUsername, isHost, participants.size()));
-
             log.info("Meeting room rendered successfully for user {} in meeting {}", cleanUsername, cleanMeetingCode);
 
             return "meeting-room";
@@ -295,31 +292,5 @@ public class MeetingWebController {
         log.error("Unexpected error in web controller", e);
         redirectAttributes.addFlashAttribute("error", "An unexpected error occurred. Please try again.");
         return "redirect:/";
-    }
-
-    /** Create meeting data for JavaScript */
-    private String createMeetingJSData(Meeting meeting, String username, boolean isHost, int participantCount) {
-        try {
-            // Create a JSON-like string for JavaScript
-            StringBuilder jsData = new StringBuilder();
-            jsData.append("{");
-            jsData.append("\"meetingCode\":\"").append(meeting.getMeetingCode()).append("\",");
-            jsData.append("\"username\":\"").append(username).append("\",");
-            jsData.append("\"isHost\":").append(isHost).append(",");
-            jsData.append("\"participantCount\":").append(participantCount).append(",");
-            jsData.append("\"createdBy\":\"").append(meeting.getCreatedBy()).append("\"");
-            if (meeting.getMeetingTitle() != null) {
-                jsData.append(",\"meetingTitle\":\"").append(meeting.getMeetingTitle()).append("\"");
-            }
-            jsData.append("}");
-
-            return jsData.toString();
-        }
-        catch (Exception e) {
-            log.warn("Error creating JS data for meeting: {}", meeting.getMeetingCode(), e);
-            // Return minimal safe data
-            return String.format("{\"meetingCode\":\"%s\",\"username\":\"%s\",\"isHost\":%b}",
-                    meeting.getMeetingCode(), username, isHost);
-        }
     }
 }

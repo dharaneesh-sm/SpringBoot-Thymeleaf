@@ -27,6 +27,41 @@ public class WebSocketController {
     private final ParticipantService participantService;
     private final SimpMessagingTemplate messagingTemplate;
 
+    // 1. Handle WebRTC Signaling
+    @MessageMapping("/meeting/{meetingCode}/webrtc-signal")
+    public void handleWebRTCSignaling(@DestinationVariable String meetingCode,
+                                      @Payload Map<String, Object> signalData, @Header("simpSessionId") String sessionId) {
+
+        try {
+            String fromSessionId = sessionId;
+            String toSessionId = (String) signalData.get("targetSessionId");
+            String type = (String) signalData.get("type");
+            Object data = signalData.get("data");
+
+            log.debug("WebRTC signal {} from {} to {} in meeting {}", type, fromSessionId, toSessionId, meetingCode);
+
+            // Prepare the message to forward
+            Map<String, Object> forwardMessage = Map.of(
+                    "type", type,
+                    "data", data,
+                    "fromSessionId", fromSessionId,
+                    "targetSessionId", toSessionId != null ? toSessionId : "",
+                    "timestamp", LocalDateTime.now().toString()
+            );
+
+            // Manual Broadcasting No @SendTo
+            // Broadcast to all participants in the meeting
+            messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode + "/webrtc-signal", forwardMessage);
+
+            log.debug("Broadcast {} signal to meeting {}", type, meetingCode);
+
+        }
+        catch (Exception e) {
+            log.error("Error handling WebRTC signaling", e);
+        }
+    }
+
+    // 2. Handle Participant Join
     @MessageMapping("/meeting/{meetingCode}/join") //Maps WebSocket messages to handler methods
     @SendTo("/topic/meeting/{meetingCode}/participants") //Server broadcasts message to specified topic
     public Map<String, Object> handleParticipantJoin(@DestinationVariable String meetingCode,
@@ -35,8 +70,6 @@ public class WebSocketController {
 
         try {
             String participantName = joinData.get("participantName");
-
-            log.info("Participant {} (session: {}) joining meeting {}", participantName, sessionId, meetingCode);
 
             Optional<Meeting> meetingOpt = meetingService.getMeetingByCode(meetingCode);
             if (meetingOpt.isPresent()) {
@@ -83,6 +116,7 @@ public class WebSocketController {
         return Map.of("type", "ERROR", "message", "Failed to join meeting");
     }
 
+    // 2. Handle Participant Leave
     @MessageMapping("/meeting/{meetingCode}/leave")
     @SendTo("/topic/meeting/{meetingCode}/participants")
     public Map<String, Object> handleParticipantLeave(@DestinationVariable String meetingCode,
@@ -120,64 +154,7 @@ public class WebSocketController {
         return Map.of("type", "ERROR", "message", "Failed to leave meeting");
     }
 
-    @MessageMapping("/meeting/{meetingCode}/webrtc-signal")
-    public void handleWebRTCSignaling(@DestinationVariable String meetingCode,
-                                      @Payload Map<String, Object> signalData, @Header("simpSessionId") String sessionId) {
-
-        try {
-            String fromSessionId = sessionId;
-            String toSessionId = (String) signalData.get("targetSessionId");
-            String type = (String) signalData.get("type");
-            Object data = signalData.get("data");
-
-            log.debug("WebRTC signal {} from {} to {} in meeting {}", type, fromSessionId, toSessionId, meetingCode);
-
-            // Prepare the message to forward
-            Map<String, Object> forwardMessage = Map.of(
-                    "type", type,
-                    "data", data,
-                    "fromSessionId", fromSessionId,
-                    "targetSessionId", toSessionId != null ? toSessionId : "",
-                    "timestamp", LocalDateTime.now().toString()
-            );
-
-            // Broadcast to all participants in the meeting
-            messagingTemplate.convertAndSend("/topic/meeting/" + meetingCode + "/webrtc-signal", forwardMessage);
-            
-            log.debug("Broadcast {} signal to meeting {}", type, meetingCode);
-
-        }
-        catch (Exception e) {
-            log.error("Error handling WebRTC signaling", e);
-        }
-    }
-
-    @MessageMapping("/meeting/{meetingCode}/chat")
-    @SendTo("/topic/meeting/{meetingCode}/chat")
-    public Map<String, Object> handleChatMessage(@DestinationVariable String meetingCode,
-                                                 @Payload Map<String, String> chatData, Principal principal) {
-
-        try {
-            String message = chatData.get("message");
-            String senderName = chatData.get("senderName");
-
-            log.debug("Chat message in meeting {}: {} - {}", meetingCode, senderName, message);
-
-            return Map.of(
-                    "type", "CHAT_MESSAGE",
-                    "message", message,
-                    "senderName", senderName,
-                    "timestamp", LocalDateTime.now().toString()
-            );
-
-        }
-        catch (Exception e) {
-            log.error("Error handling chat message", e);
-        }
-
-        return Map.of("type", "ERROR", "message", "Failed to send message");
-    }
-
+    // 3. Handle Media State
     @MessageMapping("/meeting/{meetingCode}/media-state")
     @SendTo("/topic/meeting/{meetingCode}/media-state")
     public Map<String, Object> handleMediaStateChange(@DestinationVariable String meetingCode,
@@ -209,5 +186,32 @@ public class WebSocketController {
         }
 
         return Map.of("type", "ERROR", "message", "Failed to update media state");
+    }
+
+    // 4. Handle Chat Messages
+    @MessageMapping("/meeting/{meetingCode}/chat")
+    @SendTo("/topic/meeting/{meetingCode}/chat")
+    public Map<String, Object> handleChatMessage(@DestinationVariable String meetingCode,
+                                                 @Payload Map<String, String> chatData, Principal principal) {
+
+        try {
+            String message = chatData.get("message");
+            String senderName = chatData.get("senderName");
+
+            log.debug("Chat message in meeting {}: {} - {}", meetingCode, senderName, message);
+
+            return Map.of(
+                    "type", "CHAT_MESSAGE",
+                    "message", message,
+                    "senderName", senderName,
+                    "timestamp", LocalDateTime.now().toString()
+            );
+
+        }
+        catch (Exception e) {
+            log.error("Error handling chat message", e);
+        }
+
+        return Map.of("type", "ERROR", "message", "Failed to send message");
     }
 }

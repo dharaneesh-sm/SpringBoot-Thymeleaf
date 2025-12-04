@@ -4,20 +4,20 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
+// import org.springframework.security.core.GrantedAuthority;
+// import org.springframework.security.core.authority.SimpleGrantedAuthority;
+// import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
+// import java.util.Collection;
+// import java.util.List;
 
 @Entity
-@Table(name = "users") // Changed to lowercase for better convention
+@Table(name = "users")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class User implements UserDetails {
+public class User /* implements UserDetails */ {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,7 +36,7 @@ public class User implements UserDetails {
     private String role = "ROLE_USER";
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now(); // Changed from LocalDate
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "is_active")
     private Boolean isActive = true;
@@ -44,7 +44,8 @@ public class User implements UserDetails {
     @Column(name = "display_name", length = 100)
     private String displayName; // For showing in meetings
 
-    // Spring Security UserDetails implementation
+    // Spring Security UserDetails implementation - NOT USED (Session-based auth instead)
+    /*
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(role));
@@ -69,4 +70,5 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return isActive;
     }
+    */
 }

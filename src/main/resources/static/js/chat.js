@@ -13,6 +13,7 @@ class ChatManager {
 	setupWebSocketSubscription() {
 		if (!this.stompClient) return;
 		
+		// 4. Chat Messages (Send and receive chat messages)
 		this.stompClient.subscribe(`/topic/meeting/${this.meetingCode}/chat`, (message) => {
 			const data = JSON.parse(message.body);
 			this.handleChatMessage(data);

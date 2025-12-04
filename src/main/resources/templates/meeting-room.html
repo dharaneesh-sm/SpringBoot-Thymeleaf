@@ -167,9 +167,9 @@
             </div>
         </div>
 
-        <!-- Hidden data for JavaScript -->
         <script th:inline="javascript">
             // Pass server-side data to JavaScript
+            // Thymeleaf inline JS: /*[[...]]*/ placeholders are replaced by server values, fallback values run in static HTML
             window.meetingData = {
                 meetingCode: /*[[${meetingCode}]]*/ '',
                 username: /*[[${username}]]*/ '',

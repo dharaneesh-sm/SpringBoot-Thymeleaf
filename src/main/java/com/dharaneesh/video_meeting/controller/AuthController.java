@@ -162,7 +162,8 @@ public class AuthController {
         if (user != null) {
             model.addAttribute("user", user);
             return "profile";
-        } else {
+        }
+        else {
             session.invalidate();
             redirectAttributes.addFlashAttribute("error", "User not found. Please sign in again.");
             return "redirect:/signin";
@@ -190,7 +191,8 @@ public class AuthController {
             redirectAttributes.addFlashAttribute("success", "Profile updated successfully!");
             return "redirect:/profile";
             
-        } catch (Exception e) {
+        }
+        catch (Exception e) {
             log.error("Error updating profile", e);
             redirectAttributes.addFlashAttribute("error", e.getMessage());
             return "redirect:/profile";
