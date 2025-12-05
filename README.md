@@ -26,8 +26,8 @@ A real-time video conferencing application built with Spring Boot and WebRTC.
 
 ### 1. Clone Repository
 ```bash
-git clone https://github.com/yourusername/goconnect.git
-cd goconnect
+git clone https://github.com/dharaneesh-sm/SpringBoot-Thymeleaf.git
+cd SpringBoot-Thymeleaf
 ```
 
 ### 2. Setup Database
