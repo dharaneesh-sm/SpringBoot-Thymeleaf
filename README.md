@@ -11,7 +11,7 @@ A real-time video conferencing application built with Spring Boot and WebRTC.
 - 🔐 User authentication
 - 📱 Responsive design
 
-## �️ Tech Stack
+## 🛠️ Tech Stack
 
 **Backend:** Java 21, Spring Boot 3.5.6, PostgreSQL, WebSocket  
 **Frontend:** Thymeleaf, Bootstrap 5, WebRTC, JavaScript
@@ -76,7 +76,7 @@ Application starts at: `http://localhost:8080`
 - 🖥️ Share screen
 - 💬 Open chat
 - 👥 View participants
-- � Leave mueeting
+- 🔚 Leave mueeting
 
 ## 📁 Project Structure
 
@@ -109,6 +109,3 @@ src/
 **Camera/Microphone Not Working:**
 - Grant browser permissions
 - Use Chrome, Firefox, or Edge
-
-
-**⭐ Star this repo if you find it helpful!**
