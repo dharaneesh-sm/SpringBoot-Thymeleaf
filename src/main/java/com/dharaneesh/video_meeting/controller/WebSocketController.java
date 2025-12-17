@@ -1,7 +1,9 @@
 package com.dharaneesh.video_meeting.controller;
 
-import com.dharaneesh.video_meeting.model.Meeting;
-import com.dharaneesh.video_meeting.model.Participant;
+import com.dharaneesh.video_meeting.dto.DtoMapper;
+import com.dharaneesh.video_meeting.dto.ParticipantDTO;
+import com.dharaneesh.video_meeting.entity.Meeting;
+import com.dharaneesh.video_meeting.entity.Participant;
 import com.dharaneesh.video_meeting.service.MeetingService;
 import com.dharaneesh.video_meeting.service.ParticipantService;
 import lombok.RequiredArgsConstructor;
@@ -65,8 +67,10 @@ public class WebSocketController {
     @MessageMapping("/meeting/{meetingCode}/join") //Maps WebSocket messages to handler methods
     @SendTo("/topic/meeting/{meetingCode}/participants") //Server broadcasts message to specified topic
     public Map<String, Object> handleParticipantJoin(@DestinationVariable String meetingCode,
-                                                     @Payload Map<String, String> joinData,
-                                                     @Header("simpSessionId") String sessionId) {
+                                                     @Payload Map<String, String> joinData, // Message Body
+                                                     @Header("simpSessionId") String sessionId)
+                                                    //A unique ID given by Spring to each WebSocket connection
+    {
 
         try {
             String participantName = joinData.get("participantName");
@@ -83,30 +87,43 @@ public class WebSocketController {
 
                 // Get updated participant list
                 List<Participant> participants = participantService.getActiveParticipants(meetingCode);
-                List<Map<String, ? extends Serializable>> participantList = participants.stream()
-                        .map(p -> Map.of(
-                                "name", p.getParticipantName(),
-                                "isHost", p.getIsHost(),
-                                "isMuted", p.getIsMuted(),
-                                "videoEnabled", p.getVideoEnabled(),
-                                "sessionId", p.getSessionId()
-                        ))
+//                List<Map<String, ? extends Serializable>> participantList = participants.stream()
+//                        .map(p -> Map.of(
+//                                "name", p.getParticipantName(),
+//                                "isHost", p.getIsHost(),
+//                                "isMuted", p.getIsMuted(),
+//                                "videoEnabled", p.getVideoEnabled(),
+//                                "sessionId", p.getSessionId()
+//                        ))
+//                        .collect(Collectors.toList());
+
+                List<ParticipantDTO> participantList = participants.stream()
+                        .map(p -> DtoMapper.toParticipantDTO(p))
                         .collect(Collectors.toList());
 
                 log.info("Participant {} joined successfully. Total participants: {}",
                         participantName, participants.size());
 
+//                return Map.of(
+//                        "type", "PARTICIPANT_JOINED",
+//                        "participant", Map.of(
+//                                "name", participant.getParticipantName(),
+//                                "isHost", isHost,
+//                                "sessionId", participant.getSessionId()
+//                        ),
+//                        "participants", participantList,
+//                        "participantCount", participants.size(),
+//                        "timestamp", LocalDateTime.now().toString()
+//                );
+
                 return Map.of(
                         "type", "PARTICIPANT_JOINED",
-                        "participant", Map.of(
-                                "name", participant.getParticipantName(),
-                                "isHost", isHost,
-                                "sessionId", participant.getSessionId()
-                        ),
+                        "participant", DtoMapper.toParticipantDTO(participant),
                         "participants", participantList,
                         "participantCount", participants.size(),
                         "timestamp", LocalDateTime.now().toString()
                 );
+
             }
 
         } catch (Exception e) {
@@ -128,14 +145,18 @@ public class WebSocketController {
             participantService.removeParticipant(sessionId);
 
             List<Participant> participants = participantService.getActiveParticipants(meetingCode);
-            List<Map<String, ? extends Serializable>> participantList = participants.stream()
-                    .map(p -> Map.of(
-                            "name", p.getParticipantName(),
-                            "isHost", p.getIsHost(),
-                            "isMuted", p.getIsMuted(),
-                            "videoEnabled", p.getVideoEnabled(),
-                            "sessionId", p.getSessionId()
-                    ))
+//            List<Map<String, ? extends Serializable>> participantList = participants.stream()
+//                    .map(p -> Map.of(
+//                            "name", p.getParticipantName(),
+//                            "isHost", p.getIsHost(),
+//                            "isMuted", p.getIsMuted(),
+//                            "videoEnabled", p.getVideoEnabled(),
+//                            "sessionId", p.getSessionId()
+//                    ))
+//                    .collect(Collectors.toList());
+
+            List<ParticipantDTO> participantList = participants.stream()
+                    .map(p -> DtoMapper.toParticipantDTO(p))
                     .collect(Collectors.toList());
 
             return Map.of(

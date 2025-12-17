@@ -1,7 +1,7 @@
 package com.dharaneesh.video_meeting.controller;
 
-import com.dharaneesh.video_meeting.model.Meeting;
-import com.dharaneesh.video_meeting.model.Participant;
+import com.dharaneesh.video_meeting.entity.Meeting;
+import com.dharaneesh.video_meeting.entity.Participant;
 import com.dharaneesh.video_meeting.service.MeetingService;
 import com.dharaneesh.video_meeting.service.ParticipantService;
 import jakarta.servlet.http.HttpSession;
@@ -105,8 +105,28 @@ public class MeetingWebController {
     @GetMapping("/join-meeting")
     public String joinMeetingPage(Model model,
                                   @RequestParam(required = false) String code,
-                                  @RequestParam(required = false) String error) {
+                                  @RequestParam(required = false) String error,
+                                  HttpSession session) {
         log.debug("Rendering join meeting page");
+
+        // Check if user is authenticated
+        Boolean authenticated = (Boolean) session.getAttribute("authenticated");
+        String authenticatedUsername = (String) session.getAttribute("username");
+        
+        // If authenticated user tries to join their own meeting, redirect them directly
+        if (authenticated != null && authenticated && authenticatedUsername != null && code != null && !code.trim().isEmpty()) {
+            String cleanMeetingCode = code.trim().toUpperCase();
+            
+            // Check if this user created this meeting
+            Optional<Meeting> meetingOpt = meetingService.getMeetingByCode(cleanMeetingCode);
+            if (meetingOpt.isPresent()) {
+                Meeting meeting = meetingOpt.get();
+                if (meeting.getCreatedBy().equals(authenticatedUsername)) {
+                    log.info("Authenticated user {} redirected to their own meeting {}", authenticatedUsername, cleanMeetingCode);
+                    return "redirect:/meeting/" + cleanMeetingCode + "?username=" + authenticatedUsername;
+                }
+            }
+        }
 
         // Pre-fill meeting code if provided
         if (code != null && !code.trim().isEmpty()) {
@@ -124,6 +144,7 @@ public class MeetingWebController {
     @PostMapping("/join-meeting")
     public String handleJoinMeeting(@RequestParam String meetingCode,
                                     @RequestParam String username,
+                                    HttpSession session,
                                     RedirectAttributes redirectAttributes) {
         try {
             log.info("Joining meeting via web form: code={}, user={}", meetingCode, username);
@@ -142,6 +163,34 @@ public class MeetingWebController {
             String cleanMeetingCode = meetingCode.trim().toUpperCase();
             String cleanUsername = username.trim();
 
+            // Check if user is authenticated
+            Boolean authenticated = (Boolean) session.getAttribute("authenticated");
+            String authenticatedUsername = (String) session.getAttribute("username");
+            
+            // If authenticated user, check if they're trying to join their own meeting
+            if (authenticated != null && authenticated && authenticatedUsername != null) {
+                // Get meeting details
+                Optional<Meeting> meetingOpt = meetingService.getMeetingByCode(cleanMeetingCode);
+                if (meetingOpt.isPresent()) {
+                    Meeting meeting = meetingOpt.get();
+                    
+                    // Check if this user created this meeting
+                    if (meeting.getCreatedBy().equals(authenticatedUsername)) {
+                        log.warn("Authenticated user {} tried to join their own meeting {} via join form", 
+                                authenticatedUsername, cleanMeetingCode);
+                        redirectAttributes.addFlashAttribute("error", 
+                            "You cannot join your own meeting. You are the host of this meeting.");
+                        return "redirect:/meeting/" + cleanMeetingCode + "?username=" + authenticatedUsername;
+                    }
+                    
+                    // If authenticated user is joining someone else's meeting, use their authenticated username
+                    log.info("Authenticated user {} joining meeting {} created by {}", 
+                            authenticatedUsername, cleanMeetingCode, meeting.getCreatedBy());
+                    return "redirect:/meeting/" + cleanMeetingCode + "?username=" + authenticatedUsername;
+                }
+            }
+
+            // Guest user flow - validate input
             // Validate username length
             if (cleanUsername.length() < 2 || cleanUsername.length() > 50) {
                 redirectAttributes.addFlashAttribute("error", "Username must be between 2 and 50 characters");
@@ -156,7 +205,7 @@ public class MeetingWebController {
                 return "redirect:/join-meeting";
             }
 
-            log.info("User {} successfully validated for joining meeting {}", cleanUsername, cleanMeetingCode);
+            log.info("Guest user {} successfully validated for joining meeting {}", cleanUsername, cleanMeetingCode);
 
             // Redirect to meeting room
             return "redirect:/meeting/" + cleanMeetingCode + "?username=" + cleanUsername;

@@ -1,6 +1,6 @@
 package com.dharaneesh.video_meeting.service;
 
-import com.dharaneesh.video_meeting.model.Meeting;
+import com.dharaneesh.video_meeting.entity.Meeting;
 import com.dharaneesh.video_meeting.repository.MeetingRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

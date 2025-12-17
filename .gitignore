@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+repomix-output.xml
+application.properties
+
+database
+logs

@@ -13,9 +13,9 @@ public class GoConnectApplication {
                 "=================================================\n" +
                 "   Video Meeting Application Started Successfully!\n" +
                 "   \n" +
-                "   🌐 Application URL: http://localhost:8080\n" +
+                "   Application URL: http://localhost:8080\n" +
                 "   \n" +
-                "   Ready to host video meetings! 🎥\n" +
+                "   Ready to host video meetings! \n" +
                 "=================================================\n"
         );
 	}

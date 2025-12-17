@@ -1,4 +1,4 @@
-package com.dharaneesh.video_meeting.model;
+package com.dharaneesh.video_meeting.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;

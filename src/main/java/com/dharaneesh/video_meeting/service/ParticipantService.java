@@ -1,13 +1,12 @@
 package com.dharaneesh.video_meeting.service;
 
-import com.dharaneesh.video_meeting.model.Meeting;
-import com.dharaneesh.video_meeting.model.Participant;
+import com.dharaneesh.video_meeting.entity.Meeting;
+import com.dharaneesh.video_meeting.entity.Participant;
 import com.dharaneesh.video_meeting.repository.MeetingRepository;
 import com.dharaneesh.video_meeting.repository.ParticipantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,7 +15,6 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
 public class ParticipantService {
 
     private final ParticipantRepository participantRepository;
@@ -63,7 +61,6 @@ public class ParticipantService {
         }
     }
 
-    @Transactional(readOnly = true)
     public List<Participant> getActiveParticipants(String meetingCode) {
         return participantRepository.findActiveParticipantsByMeetingCode(meetingCode);
     }

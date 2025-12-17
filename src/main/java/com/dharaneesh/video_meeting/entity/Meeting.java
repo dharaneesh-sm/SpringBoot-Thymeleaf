@@ -1,4 +1,4 @@
-package com.dharaneesh.video_meeting.model;
+package com.dharaneesh.video_meeting.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -40,6 +40,7 @@ public class Meeting {
      cascasde - Saving/deleting Meeting affects all participants automatically. */
     @OneToMany(mappedBy = "meeting", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<Participant> participants = new HashSet<>();
+
 
     // Helper method to check if meeting is active
     public boolean isActive() {
