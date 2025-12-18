@@ -2,6 +2,7 @@ package com.dharaneesh.video_meeting.controller;
 
 import com.dharaneesh.video_meeting.entity.Meeting;
 import com.dharaneesh.video_meeting.entity.Participant;
+import com.dharaneesh.video_meeting.exception.CustomException;
 import com.dharaneesh.video_meeting.service.MeetingService;
 import com.dharaneesh.video_meeting.service.ParticipantService;
 import jakarta.servlet.http.HttpSession;
@@ -63,51 +64,36 @@ public class MeetingWebController {
     @PostMapping("/create-meeting")
     public String handleCreateMeeting(@RequestParam(required = false) String username,
                                       @RequestParam(required = false) String meetingTitle,
-                                      HttpSession session,
-                                      RedirectAttributes redirectAttributes,
-                                      Model model) {
-        try {
-            // Require authentication for creating meetings
-            Boolean authenticated = (Boolean) session.getAttribute("authenticated");
-            if (authenticated == null || !authenticated) {
-                redirectAttributes.addFlashAttribute("error", "Please sign in to create a meeting");
-                return "redirect:/signin";
-            }
+                                      HttpSession session, RedirectAttributes redirectAttributes) {
 
-            // Use authenticated user's username
-            String cleanUsername = (String) session.getAttribute("username");
-            log.info("Creating meeting via web form: user={}, title={}", cleanUsername, meetingTitle);
+        // Require authentication for creating meetings
+        Boolean authenticated = (Boolean) session.getAttribute("authenticated");
+        if (authenticated == null || !authenticated)
+            throw new CustomException("Please sign in to create a meeting", "redirect:/signin");
 
-            // Create meeting
-            Meeting meeting = meetingService.createMeeting(cleanUsername, meetingTitle);
+        // Use authenticated user's username
+        String cleanUsername = (String) session.getAttribute("username");
+        if(cleanUsername == null)
+            throw new CustomException("Session expired. Please sign in again.", "/signin");
 
-            log.info("Meeting created successfully: {} by {}", meeting.getMeetingCode(), cleanUsername);
+        log.info("Creating meeting via web form: user={}, title={}", cleanUsername, meetingTitle);
 
-            // Add success message
-            redirectAttributes.addFlashAttribute("success",
-                    "Meeting created successfully! Code: " + meeting.getMeetingCode());
+        // Create meeting
+        Meeting meeting = meetingService.createMeeting(cleanUsername, meetingTitle);
 
-            // Redirect to the meeting room
-            return "redirect:/meeting/" + meeting.getMeetingCode() + "?username=" + cleanUsername;
+        log.info("Meeting created successfully: {} by {}", meeting.getMeetingCode(), cleanUsername);
 
-        } catch (IllegalArgumentException e) {
-            log.warn("Invalid input for creating meeting: {}", e.getMessage());
-            redirectAttributes.addFlashAttribute("error", e.getMessage());
-            return "redirect:/create-meeting";
+        // Add success message
+        redirectAttributes.addFlashAttribute("success",
+                "Meeting created successfully! Code: " + meeting.getMeetingCode());
 
-        } catch (Exception e) {
-            log.error("Error creating meeting via web form", e);
-            redirectAttributes.addFlashAttribute("error", "Failed to create meeting. Please try again.");
-            return "redirect:/create-meeting";
-        }
+        // Redirect to the meeting room
+        return "redirect:/meeting/" + meeting.getMeetingCode() + "?username=" + cleanUsername;
+
     }
 
     @GetMapping("/join-meeting")
-    public String joinMeetingPage(Model model,
-                                  @RequestParam(required = false) String code,
-                                  @RequestParam(required = false) String error,
-                                  HttpSession session) {
-        log.debug("Rendering join meeting page");
+    public String joinMeetingPage(Model model, @RequestParam(required = false) String code, HttpSession session) {
 
         // Check if user is authenticated
         Boolean authenticated = (Boolean) session.getAttribute("authenticated");
@@ -131,11 +117,6 @@ public class MeetingWebController {
         // Pre-fill meeting code if provided
         if (code != null && !code.trim().isEmpty()) {
             model.addAttribute("meetingCode", code.trim().toUpperCase());
-        }
-
-        // Add error message if provided
-        if (error != null && !error.trim().isEmpty()) {
-            model.addAttribute("error", error);
         }
 
         return "join-meeting";

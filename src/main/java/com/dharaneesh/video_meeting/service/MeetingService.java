@@ -16,7 +16,6 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor // Lombok annotation for constructor injection
 @Slf4j // Logging support
-@Transactional // Default transaction behavior
 public class MeetingService {
 
     private final MeetingRepository meetingRepository;
@@ -36,7 +35,6 @@ public class MeetingService {
         return savedMeeting;
     }
 
-    @Transactional(readOnly = true)
     public Optional<Meeting> getMeetingByCode(String code) {
         log.debug("Looking for meeting with code: {}", code);
         return meetingRepository.findByMeetingCode(code.toUpperCase());

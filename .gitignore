@@ -37,3 +37,9 @@ application.properties
 
 database
 logs
+
+APPLICATION_FLOW_DIAGRAMS.md
+TECHNICAL_DESIGN.md
+
+.gitignore
+.gitattributes

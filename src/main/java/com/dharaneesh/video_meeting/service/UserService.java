@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -14,7 +13,6 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
 public class UserService {
 
     private final UserRepository userRepository;
@@ -73,52 +71,55 @@ public class UserService {
     }
 
     private void validateEmailRules(String email) {
-        if (!email.contains("@") || !email.contains(".") || email.length() < 5) {
+
+        String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+        if(email.matches(emailRegex))
             throw new IllegalArgumentException("Please enter a valid email address");
-        }
     }
 
     private void validatePasswordRules(String password) {
-        if (password.length() < 6) {
-            throw new IllegalArgumentException("Password must be at least 6 characters long");
+        if (password == null || password.isBlank())
+            throw new IllegalArgumentException("Password is required");
+
+        String strongPasswordRegex = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[^a-zA-Z0-9]).{8,}$";
+
+        if(!password.matches(strongPasswordRegex)) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long and " +
+                    "contain 1 uppercase letter, 1 lowercase letter, and 1 special character");
         }
     }
 
     private void checkUserUniqueness(String username, String email) {
-        if (userRepository.existsByUsername(username)) {
+        if (userRepository.existsByUsername(username))
             throw new IllegalArgumentException("Username already exists");
-        }
-        if (userRepository.existsByEmail(email)) {
+
+        if (userRepository.existsByEmail(email))
             throw new IllegalArgumentException("Email already exists");
-        }
     }
 
-    @Transactional(readOnly = true)
     public Optional<User> findByUsername(String username) {
-        if (username == null || username.trim().isEmpty()) {
+        if (username == null || username.trim().isEmpty())
             return Optional.empty();
-        }
+
         return userRepository.findByUsername(username.trim());
     }
 
     public User updateUser(String username, String displayName, String email) {
         Optional<User> userOpt = findByUsername(username);
-        if (userOpt.isEmpty()) {
+        if (userOpt.isEmpty())
             throw new IllegalArgumentException("User not found");
-        }
 
         User user = userOpt.get();
 
         // Update display name if provided
-        if (displayName != null && !displayName.trim().isEmpty()) {
+        if (displayName != null && !displayName.trim().isEmpty())
             user.setDisplayName(displayName.trim());
-        }
 
         // Update email if provided and different
         if (email != null && !email.trim().isEmpty() && !email.equals(user.getEmail())) {
-            if (userRepository.existsByEmail(email.trim().toLowerCase())) {
+            if (userRepository.existsByEmail(email.trim().toLowerCase()))
                 throw new IllegalArgumentException("Email already exists");
-            }
+
             user.setEmail(email.trim().toLowerCase());
         }
 

@@ -12,7 +12,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 @RequiredArgsConstructor
-@Slf4j
 public class AuthController {
 
     private final AuthService authService;
@@ -54,8 +53,7 @@ public class AuthController {
     public String handleSignup(@RequestParam String username, @RequestParam String email,
                                @RequestParam String password, @RequestParam String confirmPassword,
                                @RequestParam(required = false) String displayName,
-                               HttpSession session,
-                               RedirectAttributes redirectAttributes) {
+                               HttpSession session, RedirectAttributes redirectAttributes) {
 
         User user = authService.registerUser(username, email, password, confirmPassword, displayName);
         authService.setUserSession(session, user);
@@ -66,17 +64,6 @@ public class AuthController {
         );
 
         return "redirect:/";
-    }
-
-    // Helper method to preserve form data on validation errors
-    private void preserveFormData(RedirectAttributes redirectAttributes,
-                                  String username, String email, String displayName) {
-        if (username != null)
-            redirectAttributes.addFlashAttribute("username", username);
-        if (email != null)
-            redirectAttributes.addFlashAttribute("email", email);
-        if (displayName != null)
-            redirectAttributes.addFlashAttribute("displayName", displayName);
     }
 
     @GetMapping("/signout")
